@@ -16,10 +16,15 @@
   },
   "dependencies": {
     "@repo/logger": "workspace:*",
+    "@repo/types": "workspace:*",
+    "@types/sequelize": "^6.12.0",
     "body-parser": "2.3.0",
     "cors": "2.8.6",
     "express": "5.2.1",
-    "morgan": "1.12.0"
+    "morgan": "1.12.0",
+    "pg": "^8.23.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.8"
   },
   "devDependencies": {
     "@jest/globals": "30.5.1",
@@ -32,6 +37,7 @@
     "@types/morgan": "1.9.10",
     "@types/node": "26.4.1",
     "@types/supertest": "7.2.1",
+    "@types/validator": "^13.15.10",
     "@typescript/native": "npm:typescript@7.0.2",
     "eslint": "10.9.1",
     "jest": "30.5.1",

@@ -494,6 +494,144 @@ DELETE /api/identity/tenants/:id
 
 The `include` query parameter accepts comma-separated association aliases. The tenant `by-name` route is registered before `/:id` so it is not interpreted as an ID.
 
+## Current Code: Institute Module
+
+The institute module is located at `apps/api/src/modules/institute`. It follows the same domain-oriented organization as the identity module:
+
+```text
+institute/
+├── controller/       # Explicit Express handler functions
+├── model/
+│   ├── member/       # Member profiles and member-owned records
+│   ├── academic/     # Departments, programs, and batches
+│   ├── access/       # Roles, permissions, and join models
+│   └── mapping/      # Sequelize association registration
+├── repository/       # Persistence classes by domain
+├── service/          # Service classes by domain
+├── route/            # Reserved for institute route composition
+└── utils/            # Module utilities
+```
+
+### Institute Models
+
+#### Member Models
+
+- `Member`: institute member linked to an identity account.
+- `Certification`: member certification with issuing organization, issue date, and credential URL.
+- `Project`: member project with description, repository URL, and demo URL.
+- `ProfessionalExperience`: member employment history, including company, title, dates, and current-role state.
+- `MemberProfile`: one-to-one profile with headline, biography, location, and social links.
+- `AlumniProfile`: one-to-one alumni information with program, graduation year, mentorship, and referral availability.
+- `MemberSkill`: member skill snapshot with proficiency and verification state.
+- `TpoProfile`: one-to-one TPO profile with designation, scope, and department.
+- `FacultyProfile`: one-to-one faculty profile with employee number, designation, and department.
+- `StudentProfile`: one-to-one student profile with enrollment, department, program, batch, CGPA, backlog, and placement data.
+
+#### Academic Models
+
+- `Department`: department hierarchy with optional `parent_department_id`.
+- `Program`: academic program belonging to a department.
+- `Batch`: program batch with start and graduation years.
+
+#### Access Models
+
+- `Role`: role catalog with unique code, name, and system-role flag.
+- `Permission`: permission catalog with unique code and module.
+- `MemberRole`: member-to-role assignment with assignment timestamp.
+- `RolePermission`: role-to-permission join model with a unique role/permission pair.
+
+All institute models use UUID primary keys and managed `created_at`/`updated_at` timestamps. URL fields use Sequelize URL validation, and profile/join constraints use unique foreign keys where the relationship is one-to-one.
+
+### Institute Associations
+
+Association definitions are under `institute/model/mapping`.
+
+| Source | Relationship | Target | Alias |
+| --- | --- | --- | --- |
+| `Member` | belongs to | `IdAccount` | `account` |
+| `Member` | has many | `Certification` | `certifications` |
+| `Member` | has many | `Project` | `projects` |
+| `Member` | has many | `ProfessionalExperience` | `professional_experiences` |
+| `Member` | has one | `MemberProfile` | `profile` |
+| `Member` | has one | `AlumniProfile` | `alumni_profile` |
+| `Member` | has many | `MemberSkill` | `skills` |
+| `Member` | has one | `TpoProfile` | `tpo_profile` |
+| `Member` | has one | `FacultyProfile` | `faculty_profile` |
+| `Member` | has one | `StudentProfile` | `student_profile` |
+| `Member` | has many | `MemberRole` | `roles` |
+| `Department` | has many | `Program` | `programs` |
+| `Department` | has many | `FacultyProfile` | `faculty_profiles` |
+| `Department` | has many | `StudentProfile` | `student_profiles` |
+| `Department` | self has many | `Department` | `child_departments` |
+| `Program` | has many | `Batch` | `batches` |
+| `Program` | has many | `StudentProfile` | `student_profiles` |
+| `Batch` | has many | `StudentProfile` | `student_profiles` |
+| `Role` | has many | `MemberRole` | `member_roles` |
+| `Role` | has many | `RolePermission` | `role_permissions` |
+| `Permission` | has many | `RolePermission` | `role_permissions` |
+
+The reverse associations use aliases such as `member`, `department`, `program`, `batch`, `role`, and `permission`. One-to-one relationships are enforced with unique child foreign keys such as `member_id` on profile models.
+
+### Institute Repositories
+
+Repositories mirror the institute model domains:
+
+```text
+institute/repository/
+├── base.repository.ts
+├── member/
+├── academic/
+└── access/
+```
+
+The institute base repository re-exports the shared identity `BaseRepository`, so every institute repository supports:
+
+- `create(data)`
+- `getById(id, options)`
+- `getAll(options)`
+- `getOne(where, options)`
+- `update(where, data, options)`
+- `updateById(id, data, options)`
+- `delete(where)`
+- `deleteById(id)`
+
+Read methods accept Sequelize options and can load institute relationships with `include` aliases.
+
+### Institute Services
+
+Services mirror the repository domains under `institute/service`:
+
+```text
+institute/service/
+├── base.service.ts
+├── member/
+├── academic/
+└── access/
+```
+
+Each service owns the matching repository and delegates the shared CRUD operations. Resource-specific business rules can be added directly to an individual service without changing the shared identity implementation.
+
+### Institute Controllers
+
+Institute controllers are intentionally plain Express functions rather than classes or a base controller hierarchy. Each controller exports explicit handlers such as:
+
+```ts
+export const createMember = async (req, res, next) => {
+	try {
+		const member = await memberService.create(req.body);
+		res.status(201).json(member);
+	} catch (error) {
+		next(error);
+	}
+};
+```
+
+Each resource controller owns its service instance and normally exports handlers for create, list, get-by-ID, update, and delete. This makes scope checks, authorization rules, and resource-specific behavior easy to add directly inside the relevant function.
+
+The controller utility only centralizes mechanical request parsing for resource IDs and comma-separated `include` aliases; it is not a controller base class.
+
+Institute routes have not yet been composed or mounted. The `institute/route` directory is reserved for route modules that will connect these handlers to Express.
+
 ## Testing and Validation
 
 The current validation baseline is:

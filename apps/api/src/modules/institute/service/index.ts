@@ -1,0 +1,21 @@
+export * from "./base.service";
+
+export * from "./member/member.service";
+export * from "./member/certification.service";
+export * from "./member/project.service";
+export * from "./member/professional-experience.service";
+export * from "./member/member-profile.service";
+export * from "./member/alumni-profile.service";
+export * from "./member/member-skill.service";
+export * from "./member/tpo-profile.service";
+export * from "./member/faculty-profile.service";
+export * from "./member/student-profile.service";
+
+export * from "./academic/department.service";
+export * from "./academic/program.service";
+export * from "./academic/batch.service";
+
+export * from "./access/role.service";
+export * from "./access/permission.service";
+export * from "./access/member-role.service";
+export * from "./access/role-permission.service";

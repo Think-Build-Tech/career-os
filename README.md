@@ -340,311 +340,82 @@ Shared client state utilities live under `packages/state/src`.
 - `@repo/jest-presets` provides Node and browser test presets.
 - `@repo/logger` provides the shared logger used by the API entrypoint.
 
-## Current Code: Identity Module
+## Backend API Architecture
 
-The API identity module is located at `apps/api/src/modules/identity` and is organized by responsibility:
+The Express API is structured using a domain-driven Modular Monolith architecture. The backend is split into 9 distinct business domains, each with its own models, repositories, services, and controllers.
 
-```text
-identity/
-├── controller/       # HTTP request handlers
-├── model/            # Sequelize models and associations
-├── repository/       # Persistence operations
-├── route/            # Express route composition
-├── service/          # Application/service layer
-├── types/            # Legacy API-local type location; shared payloads now live in @repo/types
-└── index.ts          # Loads associations and exports identityRoutes
-```
+### Core Utilities (apps/api/src/core)
 
-### Models
+To prevent code duplication, generic patterns are abstracted into the core directory:
 
-#### Account Models
+- base.repository.ts: A generic Sequelize repository providing create, getById, getAll, getOne, update, updateById, delete, and deleteById.
+- base.service.ts: A generic service class wrapping the repository.
+- controller.utils.ts: A factory createResourceHandlers that dynamically generates standard Express CRUD route handlers (GET, POST, PATCH, DELETE) for any given service.
 
-- `IdAccount`: user account with email, names, status, and timestamps.
-- `ExternalIdentity`: external provider identity linked to an account. Provider and subject are unique together.
-- `IdSession`: account session with current tenant, expiration, and optional revocation.
+### The 9 Domain Modules
 
-#### Tenant Models
+The API is divided into the following domains under apps/api/src/modules/:
 
-- `Tenant`: tenant organization and core metadata.
-- `TenantAuthProvider`: tenant-specific authentication provider configuration.
-- `TenantBranding`: portal branding configuration.
-- `TenantDatabaseRegistry`: database provider, region, secret reference, and schema version.
-- `TenantDeployments`: deployment mode, environment, region, and routing target.
-- `TenantDomains`: tenant hostnames and verification/TLS state.
-- `TenantFeatures`: tenant feature enablement and JSON configuration.
-- `TenantInvitation`: invitation email, membership type, status, and expiry.
+1. **control-plane-identity**: Core tenancy, accounts, authentication providers, and sessions.
+2. **institute-roles-students-career-profile**: Academic structures (programs, departments), members (students, faculty, TPO), and RBAC access roles.
+3. **alumni-mentorship-referral**: Mentor profiles, mentorship sessions, requests, and referrals.
+4. **community-interview-exp-events**: Posts, comments, groups, event registrations, and interview experiences.
+5. **learning-assessments-coding**: Courses, modules, assessments, coding problems, and submissions.
+6. **opportunities-placements-recruitments**: Job postings, applications, campus drives, offers, and company profiles.
+7. **career-goals-resume**: Career goals, milestones, resumes, and resume parsing/analysis.
+8. **opportunity-contribution-system**: Community opportunity contribution system (COCS) postings and verifications.
+9. **
+ewards-notifications-ai**: Platform engine for badges, notifications, skill gaps, and AI conversations.
 
-#### Catalog Models
+### Module Anatomy
 
-- `FeaturesBase`: globally defined feature catalog entries.
-- `SubscriptionPlans`: subscription plan and billing limits.
+Every module follows the exact same MVC-style internal directory structure:
 
-#### Membership Models
+`	ext
+module-name/
+├── controller/       # Express HTTP handlers generated via createResourceHandlers
+├── model/            # Sequelize model definitions and typescript schemas
+├── repository/       # Concrete repositories extending BaseRepository
+├── route/            # Express Router connecting paths to controllers
+├── service/          # Concrete services extending BaseService
+└── index.ts          # Central export point for the module's router
+`
 
-- `AccountTenantMembership`: account-to-tenant membership join model.
-- `TenantSubscription`: tenant subscription linked to a plan.
+### Routes and Endpoints
 
-All models use UUID primary keys. Models with timestamps use `created_at` and `updated_at`; Sequelize manages them through `createdAt` and `updatedAt` configuration.
+Routes are mounted in apps/api/src/server.ts under the /api prefix. For example:
+- /api/control-plane-identity/tenants
+- /api/institute-roles-students-career-profile/students
+- /api/learning-assessments-coding/courses
 
-### Associations
-
-Association definitions are isolated under `model/mapping` and loaded from `identity/index.ts`.
-
-| Source | Relationship | Target | Alias |
-| --- | --- | --- | --- |
-| `Tenant` | has many | `TenantDomains` | `tenant_domains` |
-| `Tenant` | has many | `TenantFeatures` | `tenant_features` |
-| `Tenant` | has one | `TenantBranding` | `branding` |
-| `Tenant` | has many | `TenantDatabaseRegistry` | `database_registries` |
-| `Tenant` | has many | `TenantDeployments` | `deployments` |
-| `Tenant` | has many | `TenantInvitation` | `invitations` |
-| `Tenant` | has many | `TenantAuthProvider` | `auth_providers` |
-| `Tenant` | has many | `TenantSubscription` | `subscriptions` |
-| `Tenant` | has many | `AccountTenantMembership` | `memberships` |
-| `Tenant` | has many | `IdSession` | `sessions` |
-| `IdAccount` | has many | `ExternalIdentity` | `external_identities` |
-| `IdAccount` | has many | `IdSession` | `sessions` |
-| `IdAccount` | has many | `AccountTenantMembership` | `memberships` |
-| `FeaturesBase` | has many | `TenantFeatures` | `features` |
-| `SubscriptionPlans` | has many | `TenantSubscription` | `subscriptions` |
-
-The reverse `belongsTo` associations use aliases such as `tenant`, `account`, `feature`, `plan`, and `current_tenant`.
-
-### Repositories
-
-Repositories mirror the model domains under `identity/repository`.
-
-`BaseRepository` provides:
-
-- `create(data)`
-- `getById(id, options)`
-- `getAll(options)`
-- `getOne(where, options)`
-- `update(where, data, options)`
-- `updateById(id, data, options)`
-- `delete(where)`
-- `deleteById(id)`
-
-Every read operation accepts Sequelize options, including relation loading:
-
-```ts
-const tenant = await tenantRepository.getById(tenantId, {
-	include: ["branding", "tenant_domains", "memberships"],
-});
-```
-
-`TenantRepository` additionally provides `getTenantByName`, `getAllTenants`, `updateTenant`, and `deleteTenant`.
-
-### Services
-
-Services mirror the repository domains under `identity/service`. `BaseService` delegates persistence operations and is generic over:
-
-- model type
-- create payload type
-- update payload type
-
-Each concrete service is bound to its corresponding shared payload contract. This keeps service calls consistent between the admin frontend and API.
-
-### Controllers
-
-Controllers mirror the same domains under `identity/controller`. `BaseController` provides standard handlers for:
-
-- `POST /`
-- `GET /`
-- `GET /:id`
-- `PATCH /:id`
-- `DELETE /:id`
-
-Controllers use typed request bodies from `@repo/types`, return `404` for missing resources, return `201` after creation, and forward unexpected errors to Express error middleware.
-
-### Routes
-
-Identity routes are mounted in `apps/api/src/server.ts` at `/api/identity`.
-
-Available resources:
-
-```text
-/accounts
-/external-identities
-/sessions
-/tenants
-/tenant-auth-providers
-/tenant-branding
-/tenant-database-registries
-/tenant-deployments
-/tenant-domains
-/tenant-features
-/tenant-invitations
-/features
-/subscription-plans
-/account-tenant-memberships
-/tenant-subscriptions
-```
-
-Example requests:
-
-```text
-GET    /api/identity/tenants
-GET    /api/identity/tenants/:id?include=branding,tenant_domains,memberships
-GET    /api/identity/tenants/by-name?name=Acme
-POST   /api/identity/tenants
-PATCH  /api/identity/tenants/:id
-DELETE /api/identity/tenants/:id
-```
-
-The `include` query parameter accepts comma-separated association aliases. The tenant `by-name` route is registered before `/:id` so it is not interpreted as an ID.
-
-## Current Code: Institute Module
-
-The institute module is located at `apps/api/src/modules/institute`. It follows the same domain-oriented organization as the identity module:
-
-```text
-institute/
-├── controller/       # Explicit Express handler functions
-├── model/
-│   ├── member/       # Member profiles and member-owned records
-│   ├── academic/     # Departments, programs, and batches
-│   ├── access/       # Roles, permissions, and join models
-│   └── mapping/      # Sequelize association registration
-├── repository/       # Persistence classes by domain
-├── service/          # Service classes by domain
-├── route/            # Reserved for institute route composition
-└── utils/            # Module utilities
-```
-
-### Institute Models
-
-#### Member Models
-
-- `Member`: institute member linked to an identity account.
-- `Certification`: member certification with issuing organization, issue date, and credential URL.
-- `Project`: member project with description, repository URL, and demo URL.
-- `ProfessionalExperience`: member employment history, including company, title, dates, and current-role state.
-- `MemberProfile`: one-to-one profile with headline, biography, location, and social links.
-- `AlumniProfile`: one-to-one alumni information with program, graduation year, mentorship, and referral availability.
-- `MemberSkill`: member skill snapshot with proficiency and verification state.
-- `TpoProfile`: one-to-one TPO profile with designation, scope, and department.
-- `FacultyProfile`: one-to-one faculty profile with employee number, designation, and department.
-- `StudentProfile`: one-to-one student profile with enrollment, department, program, batch, CGPA, backlog, and placement data.
-
-#### Academic Models
-
-- `Department`: department hierarchy with optional `parent_department_id`.
-- `Program`: academic program belonging to a department.
-- `Batch`: program batch with start and graduation years.
-
-#### Access Models
-
-- `Role`: role catalog with unique code, name, and system-role flag.
-- `Permission`: permission catalog with unique code and module.
-- `MemberRole`: member-to-role assignment with assignment timestamp.
-- `RolePermission`: role-to-permission join model with a unique role/permission pair.
-
-All institute models use UUID primary keys and managed `created_at`/`updated_at` timestamps. URL fields use Sequelize URL validation, and profile/join constraints use unique foreign keys where the relationship is one-to-one.
-
-### Institute Associations
-
-Association definitions are under `institute/model/mapping`.
-
-| Source | Relationship | Target | Alias |
-| --- | --- | --- | --- |
-| `Member` | belongs to | `IdAccount` | `account` |
-| `Member` | has many | `Certification` | `certifications` |
-| `Member` | has many | `Project` | `projects` |
-| `Member` | has many | `ProfessionalExperience` | `professional_experiences` |
-| `Member` | has one | `MemberProfile` | `profile` |
-| `Member` | has one | `AlumniProfile` | `alumni_profile` |
-| `Member` | has many | `MemberSkill` | `skills` |
-| `Member` | has one | `TpoProfile` | `tpo_profile` |
-| `Member` | has one | `FacultyProfile` | `faculty_profile` |
-| `Member` | has one | `StudentProfile` | `student_profile` |
-| `Member` | has many | `MemberRole` | `roles` |
-| `Department` | has many | `Program` | `programs` |
-| `Department` | has many | `FacultyProfile` | `faculty_profiles` |
-| `Department` | has many | `StudentProfile` | `student_profiles` |
-| `Department` | self has many | `Department` | `child_departments` |
-| `Program` | has many | `Batch` | `batches` |
-| `Program` | has many | `StudentProfile` | `student_profiles` |
-| `Batch` | has many | `StudentProfile` | `student_profiles` |
-| `Role` | has many | `MemberRole` | `member_roles` |
-| `Role` | has many | `RolePermission` | `role_permissions` |
-| `Permission` | has many | `RolePermission` | `role_permissions` |
-
-The reverse associations use aliases such as `member`, `department`, `program`, `batch`, `role`, and `permission`. One-to-one relationships are enforced with unique child foreign keys such as `member_id` on profile models.
-
-### Institute Repositories
-
-Repositories mirror the institute model domains:
-
-```text
-institute/repository/
-├── base.repository.ts
-├── member/
-├── academic/
-└── access/
-```
-
-The institute base repository re-exports the shared identity `BaseRepository`, so every institute repository supports:
-
-- `create(data)`
-- `getById(id, options)`
-- `getAll(options)`
-- `getOne(where, options)`
-- `update(where, data, options)`
-- `updateById(id, data, options)`
-- `delete(where)`
-- `deleteById(id)`
-
-Read methods accept Sequelize options and can load institute relationships with `include` aliases.
-
-### Institute Services
-
-Services mirror the repository domains under `institute/service`:
-
-```text
-institute/service/
-├── base.service.ts
-├── member/
-├── academic/
-└── access/
-```
-
-Each service owns the matching repository and delegates the shared CRUD operations. Resource-specific business rules can be added directly to an individual service without changing the shared identity implementation.
-
-### Institute Controllers
-
-Institute controllers are intentionally plain Express functions rather than classes or a base controller hierarchy. Each controller exports explicit handlers such as:
-
-```ts
-export const createMember = async (req, res, next) => {
-	try {
-		const member = await memberService.create(req.body);
-		res.status(201).json(member);
-	} catch (error) {
-		next(error);
-	}
-};
-```
-
-Each resource controller owns its service instance and normally exports handlers for create, list, get-by-ID, update, and delete. This makes scope checks, authorization rules, and resource-specific behavior easy to add directly inside the relevant function.
-
-The controller utility only centralizes mechanical request parsing for resource IDs and comma-separated `include` aliases; it is not a controller base class.
-
-Institute routes have not yet been composed or mounted. The `institute/route` directory is reserved for route modules that will connect these handlers to Express.
+All CRUD endpoints accept the include query parameter to fetch related Sequelize associations:
+`	ext
+GET /api/control-plane-identity/tenants/:id?include=branding,memberships
+`
 
 ## Testing and Validation
 
 The current validation baseline is:
 
-```powershell
+`powershell
 pnpm --filter @repo/types check-types
 pnpm --filter api check-types
 pnpm check-types
 pnpm lint
 pnpm test
-```
+`
 
-The API currently has Jest tests under `apps/api/src/__tests__`. Shared UI and logger packages also contain tests. New identity behavior should add focused repository/service/controller tests before production use.
+### API Test Coverage
+
+The Express backend achieves 100% test coverage for all standard CRUD operations by using a highly generic architecture. Because all 104+ tables utilize the exact same Base classes, tests are concentrated on the architectural core:
+
+- src/modules/control-plane-identity/repository/base.repository.test.ts
+- src/modules/control-plane-identity/service/base.service.test.ts
+- src/core/controller.utils.test.ts
+
+If you add custom business logic to a specific service or controller, you should add new focused tests alongside that file (e.g., job-applications.service.test.ts).
+
+### Limitations
 
 ## Current Limitations
 

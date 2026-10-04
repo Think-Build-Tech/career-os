@@ -33,6 +33,9 @@ import {
     getMemberById,
     updateMember,
     deleteMember,
+    getPendingApprovals,
+    approveMember,
+    rejectMember,
 } from "../controller/member/member.controller";
 import {
     createMemberSkill,
@@ -72,7 +75,11 @@ import {
 
 const router: Router = Router();
 
-// Members
+// Members - specific routes must go before /:id routes
+router.route("/members/pending-approvals").get(getPendingApprovals);
+router.route("/members/:id/approve").post(approveMember);
+router.route("/members/:id/reject").post(rejectMember);
+
 router.route("/members").get(getMembers).post(createMember);
 router.route("/members/:id").get(getMemberById).patch(updateMember).delete(deleteMember);
 

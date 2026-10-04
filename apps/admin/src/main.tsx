@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
+import { ThemeProvider } from "@repo/ui/theme";
 import { router } from "./app/router";
 import "./index.css";
 
@@ -9,7 +10,9 @@ if (el) {
   const root = createRoot(el);
   root.render(
     <React.StrictMode>
-      <RouterProvider router={router} />
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
     </React.StrictMode>
   );
 } else {

@@ -73,3 +73,54 @@ export const deleteMember = async (
     next(error);
   }
 };
+
+export const getPendingApprovals = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const options = getFindOptions(req);
+    options.where = { ...options.where, status: 'pending_approval' };
+    res.json(await service.getAll(options));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const approveMember = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const id = getResourceId(req);
+    // TODO: get adminId from req.user/req.auth once auth middleware is in place
+    const member = await service.approveMember(id);
+    if (!member) {
+      res.status(404).json({ message: "Member not found" });
+      return;
+    }
+    res.json(member);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rejectMember = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const id = getResourceId(req);
+    const member = await service.rejectMember(id);
+    if (!member) {
+      res.status(404).json({ message: "Member not found" });
+      return;
+    }
+    res.json(member);
+  } catch (error) {
+    next(error);
+  }
+};

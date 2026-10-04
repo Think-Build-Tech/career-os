@@ -28,6 +28,136 @@
         "types": "./dist/cjs/link.d.ts",
         "default": "./dist/cjs/link.js"
       }
+    },
+    "./card": {
+      "import": {
+        "types": "./dist/es/card.d.mts",
+        "default": "./dist/es/card.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/card.d.ts",
+        "default": "./dist/cjs/card.js"
+      }
+    },
+    "./theme": {
+      "import": {
+        "types": "./dist/es/theme.d.mts",
+        "default": "./dist/es/theme.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/theme.d.ts",
+        "default": "./dist/cjs/theme.js"
+      }
+    },
+    "./stat-card": {
+      "import": {
+        "types": "./dist/es/stat-card.d.mts",
+        "default": "./dist/es/stat-card.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/stat-card.d.ts",
+        "default": "./dist/cjs/stat-card.js"
+      }
+    },
+    "./dashboard-card": {
+      "import": {
+        "types": "./dist/es/dashboard-card.d.mts",
+        "default": "./dist/es/dashboard-card.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/dashboard-card.d.ts",
+        "default": "./dist/cjs/dashboard-card.js"
+      }
+    },
+    "./job-card": {
+      "import": {
+        "types": "./dist/es/job-card.d.mts",
+        "default": "./dist/es/job-card.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/job-card.d.ts",
+        "default": "./dist/cjs/job-card.js"
+      }
+    },
+    "./progress-card": {
+      "import": {
+        "types": "./dist/es/progress-card.d.mts",
+        "default": "./dist/es/progress-card.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/progress-card.d.ts",
+        "default": "./dist/cjs/progress-card.js"
+      }
+    },
+    "./timeline-item": {
+      "import": {
+        "types": "./dist/es/timeline-item.d.mts",
+        "default": "./dist/es/timeline-item.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/timeline-item.d.ts",
+        "default": "./dist/cjs/timeline-item.js"
+      }
+    },
+    "./badge": {
+      "import": {
+        "types": "./dist/es/badge.d.mts",
+        "default": "./dist/es/badge.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/badge.d.ts",
+        "default": "./dist/cjs/badge.js"
+      }
+    },
+    "./feature-card": {
+      "import": {
+        "types": "./dist/es/feature-card.d.mts",
+        "default": "./dist/es/feature-card.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/feature-card.d.ts",
+        "default": "./dist/cjs/feature-card.js"
+      }
+    },
+    "./text-input": {
+      "import": {
+        "types": "./dist/es/text-input.d.mts",
+        "default": "./dist/es/text-input.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/text-input.d.ts",
+        "default": "./dist/cjs/text-input.js"
+      }
+    },
+    "./selector": {
+      "import": {
+        "types": "./dist/es/selector.d.mts",
+        "default": "./dist/es/selector.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/selector.d.ts",
+        "default": "./dist/cjs/selector.js"
+      }
+    },
+    "./sort-filter-dropdown": {
+      "import": {
+        "types": "./dist/es/sort-filter-dropdown.d.mts",
+        "default": "./dist/es/sort-filter-dropdown.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/sort-filter-dropdown.d.ts",
+        "default": "./dist/cjs/sort-filter-dropdown.js"
+      }
+    },
+    "./tooltip": {
+      "import": {
+        "types": "./dist/es/tooltip.d.mts",
+        "default": "./dist/es/tooltip.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/tooltip.d.ts",
+        "default": "./dist/cjs/tooltip.js"
+      }
     }
   },
   "scripts": {
@@ -59,6 +189,12 @@
     "react-dom": "19.2.8"
   },
   "dependencies": {
-    "@swc/helpers": "0.5.23"
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@mui/material": "^9.4.0",
+    "@swc/helpers": "0.5.23",
+    "lucide-react": "^1.49.0"
   }
 }

@@ -3,14 +3,6 @@ import * as React from "react";
 import { ThemeProvider as MuiThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 
-import "@fontsource/inter/300.css";
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
-import "@fontsource/inter/600.css";
-import "@fontsource/inter/700.css";
-import "@fontsource/jetbrains-mono/400.css";
-import "@fontsource/jetbrains-mono/500.css";
-
 export const theme = createTheme({
   palette: {
     primary: {
@@ -29,7 +21,7 @@ export const theme = createTheme({
     borderRadius: 8,
   },
   typography: {
-    fontFamily: '"Inter", ui-sans-serif, system-ui, sans-serif',
+    fontFamily: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
     button: {
       textTransform: "none",
     },

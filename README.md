@@ -34,6 +34,7 @@ Run an individual project:
 ```powershell
 pnpm --filter api dev
 pnpm --filter admin dev
+pnpm dev:mobile
 ```
 
 The API defaults to port `5001`. The admin Vite app defaults to port `3001`.
@@ -66,7 +67,8 @@ pnpm --filter @repo/ui test
 career-os/
 ├── apps/
 │   ├── admin/                 # React 19 + Vite administration app
-│   └── api/                   # Express + Sequelize API
+│   ├── api/                   # Express + Sequelize API
+│   └── mobile/                # Expo + React Native mobile app
 ├── packages/
 │   ├── config-eslint/         # Shared ESLint configurations
 │   ├── config-typescript/     # Shared TypeScript configurations
@@ -81,7 +83,7 @@ career-os/
 └── turbo.json                 # Turborepo task pipeline
 ```
 
-The workspace currently contains `apps/admin` and `apps/api`. The original starter applications that are not listed above are not part of the current working tree.
+The workspace currently contains `apps/admin`, `apps/api`, and `apps/mobile`. The original starter applications that are not listed above are not part of the current working tree.
 
 ## Adding New Apps and Services
 
@@ -282,6 +284,30 @@ pnpm --filter api test
 ```
 
 The API entrypoint is `apps/api/src/index.ts`. The Express application is created in `apps/api/src/server.ts`.
+
+### Mobile
+
+`apps/mobile` is the Expo/React Native mobile application. Expo detects the pnpm workspace automatically, so run commands from the monorepo root or from `apps/mobile`:
+
+```powershell
+pnpm dev:mobile
+pnpm --filter mobile android
+pnpm --filter mobile ios
+pnpm --filter mobile web
+pnpm --filter mobile check-types
+```
+
+The app uses Expo SDK 57, React Native 0.86, and React 19.2. Native `ios/` and `android/` directories are intentionally not committed; Expo generates them when needed.
+
+Mobile routes live under `apps/mobile/src/app`:
+
+- `/` — Career HQ overview
+- `/opportunities` — curated opportunities list
+- `/opportunities/[id]` — opportunity detail and application flow
+- `/applications` — application pipeline
+- `/passport` — career passport and readiness
+- `/profile` — account settings
+- `/auth` — student access screen
 
 ## API Environment
 

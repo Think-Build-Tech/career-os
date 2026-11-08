@@ -298,9 +298,20 @@ resource "aws_iam_role_policy" "ai_bedrock" {
   })
 }
 
-resource "aws_cloudwatch_log_group" "api" { name = "/ecs/${local.name}/api" retention_in_days = 30 }
-resource "aws_cloudwatch_log_group" "web" { name = "/ecs/${local.name}/web" retention_in_days = 30 }
-resource "aws_cloudwatch_log_group" "ai"  { name = "/ecs/${local.name}/ai" retention_in_days = 30 }
+resource "aws_cloudwatch_log_group" "api" {
+  name              = "/ecs/${local.name}/api"
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "web" {
+  name              = "/ecs/${local.name}/web"
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "ai" {
+  name              = "/ecs/${local.name}/ai"
+  retention_in_days = 30
+}
 
 locals {
   log_options_api = {
@@ -423,7 +434,10 @@ resource "aws_lb_target_group" "web" {
   protocol    = "HTTP"
   target_type = "ip"
   vpc_id      = aws_vpc.main.id
-  health_check { path = "/" matcher = "200-399" }
+  health_check {
+    path    = "/"
+    matcher = "200-399"
+  }
 }
 
 resource "aws_lb_target_group" "api" {
@@ -432,21 +446,34 @@ resource "aws_lb_target_group" "api" {
   protocol    = "HTTP"
   target_type = "ip"
   vpc_id      = aws_vpc.main.id
-  health_check { path = "/api/health" matcher = "200-399" }
+  health_check {
+    path    = "/api/health"
+    matcher = "200-399"
+  }
 }
 
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
-  default_action { type = "forward" target_group_arn = aws_lb_target_group.web.arn }
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web.arn
+  }
 }
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = aws_lb_listener.http.arn
   priority     = 10
-  action { type = "forward" target_group_arn = aws_lb_target_group.api.arn }
-  condition { path_pattern { values = ["/api", "/api/*"] } }
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api.arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api", "/api/*"]
+    }
+  }
 }
 
 resource "aws_ecs_service" "web" {
@@ -456,8 +483,15 @@ resource "aws_ecs_service" "web" {
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
   depends_on      = [aws_lb_listener.http]
-  network_configuration { subnets = aws_subnet.private[*].id security_groups = [aws_security_group.ecs.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.web.arn container_name = "web" container_port = 80 }
+  network_configuration {
+    subnets          = aws_subnet.private[*].id
+    security_groups  = [aws_security_group.ecs.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.web.arn
+    container_name   = "web"
+    container_port   = 80
+  }
 }
 
 resource "aws_ecs_service" "api" {
@@ -467,8 +501,15 @@ resource "aws_ecs_service" "api" {
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
   depends_on      = [aws_lb_listener_rule.api]
-  network_configuration { subnets = aws_subnet.private[*].id security_groups = [aws_security_group.ecs.id] }
-  load_balancer { target_group_arn = aws_lb_target_group.api.arn container_name = "api" container_port = 5000 }
+  network_configuration {
+    subnets          = aws_subnet.private[*].id
+    security_groups  = [aws_security_group.ecs.id]
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.api.arn
+    container_name   = "api"
+    container_port   = 5000
+  }
 }
 
 resource "aws_ecs_service" "ai" {
@@ -477,6 +518,11 @@ resource "aws_ecs_service" "ai" {
   task_definition = aws_ecs_task_definition.ai.arn
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
-  network_configuration { subnets = aws_subnet.private[*].id security_groups = [aws_security_group.ecs.id] }
-  service_registries { registry_arn = aws_service_discovery_service.ai.arn }
+  network_configuration {
+    subnets          = aws_subnet.private[*].id
+    security_groups  = [aws_security_group.ecs.id]
+  }
+  service_registries {
+    registry_arn = aws_service_discovery_service.ai.arn
+  }
 }

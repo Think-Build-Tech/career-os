@@ -1,3 +1,18 @@
 autoInstallPeers: true
 allowBuilds:
+  '@parcel/watcher': true
   nx: true
+  unrs-resolver: true
+  esbuild: true
+  lmdb: false
+  msgpackr-extract: false
+minimumReleaseAgeExclude:
+  - uuid@11.1.1
+  - esbuild@0.28.1
+  - undici@7.29.1
+  - '@angular/router@22.2.0'
+  - piscina@5.3.2
+  - node-forge@1.4.1
+  - braces@3.0.4
+  - sprintf-js@1.1.4
+  - '@modelcontextprotocol/sdk@1.31.0'

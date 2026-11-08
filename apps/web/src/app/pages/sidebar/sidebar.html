@@ -1,0 +1,212 @@
+<svg width="0" height="0" class="pointer-events-none absolute">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24">
+      <path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />
+    </symbol>
+    <symbol id="i-jobs" viewBox="0 0 24 24">
+      <path d="M3 8h18v11H3zM9 8V5h6v3" />
+    </symbol>
+    <symbol id="i-apps" viewBox="0 0 24 24">
+      <path d="M5 6h14M5 12h14M5 18h9" />
+    </symbol>
+    <symbol id="i-grow" viewBox="0 0 24 24">
+      <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />
+    </symbol>
+    <symbol id="i-people" viewBox="0 0 24 24">
+      <path
+        d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20c0-3 3-5 6-5s6 2 6 5M17 11a2.5 2.5 0 1 0 0-5M18 15c2 .5 3 2 3 5"
+      />
+    </symbol>
+    <symbol id="i-msg" viewBox="0 0 24 24">
+      <path d="M4 5h16v11H9l-5 4z" />
+    </symbol>
+    <symbol id="i-more" viewBox="0 0 24 24">
+      <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6" />
+    </symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24">
+      <path
+        d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      />
+    </symbol>
+  </defs>
+</svg>
+
+<nav
+  aria-label="Main Navigation"
+  class="sticky top-0 z-40 flex h-screen w-64 flex-col gap-1 overflow-y-auto bg-[#0d1126] px-3.5 py-5 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:h-auto max-md:w-full max-md:flex-row max-md:justify-around max-md:gap-0 max-md:border-t max-md:border-white/15 max-md:p-1.5"
+>
+<div class="flex items-center justify-between gap-2.5 px-2 pb-4 text-[17px] font-bold leading-tight text-white max-md:hidden">
+    <div class="flex items-center gap-2.5">
+      <div class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#5b45f0] font-bold text-white shadow-[0_2px_8px_rgba(91,69,240,0.4)]">
+        C
+      </div>
+      <div>
+        <span>CareerOS</span>
+        <small class="mt-0.5 block text-[11.5px] font-medium text-[#8b91ad]">
+          {{ portal.studentDisplayInfo().instituteCode }} · {{ portal.studentDisplayInfo().departmentLabel }}
+        </small>
+      </div>
+    </div>
+    <button
+      type="button"
+      aria-label="Notifications"
+      (click)="portal.openActionModalOrDrawer('notifications')"
+      class="relative grid h-[34px] w-[34px] place-items-center rounded-lg border border-white/15 bg-white/5 text-[#d6d9ea] transition hover:bg-white/15 hover:text-white">
+      <svg width="17" height="17">
+        <use href="#i-bell" />
+      </svg>
+      @if (portal.unreadNotificationCount() > 0) {
+        <span class="absolute -right-1 -top-1 rounded-full border-2 border-[#0d1126] bg-red-500 px-1.5 py-[1px] text-[10px] font-bold text-white">
+          {{ portal.unreadNotificationCount() }}
+        </span>
+      }
+    </button>
+  </div>
+
+  <button
+    type="button"
+    (click)="portal.openActionModalOrDrawer('cmd-palette')"
+    class="mb-2.5 flex w-full items-center justify-between rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-left text-[13px] text-[#9ca3c4] transition hover:border-white/25 hover:bg-white/10 hover:text-white max-md:hidden">
+    <span>Search or jump to…</span>
+    <kbd class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[11px] text-[#d6d9ea]">⌘K</kbd>
+  </button>
+
+  @for(item of portal.sidebarNavItems(); track item.id){
+    <div class="max-md:contents">
+      <button
+        type="button"
+        (click)="portal.navigateToPage(item.id)"
+        [ngClass]="{
+          'bg-white/15 font-semibold text-white': isPageActive(item.id),
+          'bg-transparent font-medium text-[#aab0cc] hover:bg-white/10 hover:text-white': !isPageActive(item.id)
+        }"
+        class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[14.5px] transition
+               max-md:w-auto max-md:flex-1 max-md:flex-col max-md:justify-center max-md:gap-0.5 max-md:px-1 max-md:py-1.5 max-md:text-center max-md:text-[11px]">
+        <svg class="h-5 w-5 shrink-0 fill-none stroke-current stroke-[1.8] [stroke-linecap:round] [stroke-linejoin:round]">
+          <use [attr.href]="'#' + item.iconId" />
+        </svg>
+        <span>{{ item.label }}</span>
+        @if (item.badgeText) {
+          <span
+            [ngClass]="{
+              'bg-amber-500 text-[#12162b]': item.badgeTone === 'warn',
+              'bg-white/15 text-white': item.badgeTone !== 'warn'
+            }"
+            class="ml-auto rounded-full px-1.5 py-0.5 text-[11px] font-bold max-md:hidden">
+            {{ item.badgeText }}
+          </span>
+        }
+      </button>
+      @if (item.id === 'msgs' && portal.isMessagesSubnavOpen()) {
+        <div class="mb-2 ml-4 mt-1 border-l border-white/15 pl-2 max-md:hidden">
+          <!-- Group 1: TACIE AI Workspace -->
+          <div>
+            <button
+              type="button"
+              (click)="portal.toggleChatSection('tacie')"
+              class="flex min-h-[32px] w-full items-center justify-between px-2 py-1 text-xs font-semibold text-[#8b91ad] hover:text-white">
+              <span>TACIE AI WORKSPACE</span>
+              <span class="transition-transform duration-150" [class.-rotate-90]="!portal.expandedChatGroups().tacie">▾</span>
+            </button>
+
+            @if (portal.expandedChatGroups().tacie) {
+              <div class="flex flex-col gap-0.5">
+                <button
+                  type="button"
+                  (click)="portal.createNewAdvisorThread()"
+                  class="flex min-h-[32px] w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-semibold text-[#a99cff] transition hover:bg-white/10">
+                  <span>+ New Contextual Thread</span>
+                </button>
+
+                @for (conv of portal.generalAdvisorConversations(); track conv.id) {
+                  <button
+                    type="button"
+                    (click)="portal.selectConversation(conv.id)"
+                    [ngClass]="isConversationActive(conv.id) ? 'bg-white/15 font-semibold text-white' : 'text-[#d6d9ea] hover:bg-white/10'"
+                    class="flex min-h-[32px] w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition">
+                    @if (conv.status_tone) {
+                      <span class="h-2 w-2 shrink-0 rounded-full" [ngClass]="getStatusDotColor(conv.status_tone)"></span>
+                    }
+                    <span class="truncate">{{ conv.title }}</span>
+                  </button>
+                }
+
+                @if (portal.appliedRoleAdvisorConversations().length > 0) {
+                  <div class="px-2 pb-0.5 pt-2 text-[11px] uppercase tracking-wider text-[#8b91ad]">
+                    Applied Role Threads
+                  </div>
+                  @for (conv of portal.appliedRoleAdvisorConversations(); track conv.id) {
+                    <button
+                      type="button"
+                      (click)="portal.selectConversation(conv.id)"
+                      [ngClass]="isConversationActive(conv.id) ? 'bg-white/15 font-semibold text-white' : 'text-[#d6d9ea] hover:bg-white/10'"
+                      class="flex min-h-[32px] w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition">
+                      @if (conv.status_tone) {
+                        <span class="h-2 w-2 shrink-0 rounded-full" [ngClass]="getStatusDotColor(conv.status_tone)"></span>
+                      }
+                      <span class="truncate">{{ conv.title }}</span>
+                    </button>
+                  }
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Group 2: Verified Alumni CRM -->
+          <div class="mt-1">
+            <button
+              type="button"
+              (click)="portal.toggleChatSection('alumni')"
+              class="flex min-h-[32px] w-full items-center justify-between px-2 py-1 text-xs font-semibold text-[#8b91ad] hover:text-white">
+              <span>VERIFIED ALUMNI CRM</span>
+              <span class="transition-transform duration-150" [class.-rotate-90]="!portal.expandedChatGroups().alumni">▾</span>
+            </button>
+            @if (portal.expandedChatGroups().alumni) {
+              <div class="flex flex-col gap-0.5">
+                @for (conv of portal.alumniConversations(); track conv.id) {
+                  <button
+                    type="button"
+                    (click)="portal.selectConversation(conv.id)"
+                    [ngClass]="isConversationActive(conv.id) ? 'bg-white/15 font-semibold text-white' : 'text-[#d6d9ea] hover:bg-white/10'"
+                    class="flex min-h-[32px] w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition">
+                    @if (conv.status_tone) {
+                      <span class="h-2 w-2 shrink-0 rounded-full" [ngClass]="getStatusDotColor(conv.status_tone)"></span>
+                    }
+                    <span class="truncate">{{ conv.title }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Bottom User Profile & Role Switcher -->
+  <div class="mt-auto flex flex-col gap-2.5 border-t border-white/15 pt-3 max-md:hidden">
+    <button
+      type="button"
+      (click)="portal.openActionModalOrDrawer('tpo-governance')"
+      class="flex w-full items-center justify-between rounded-lg border border-[#5b45f0]/40 bg-[#5b45f0]/20 px-2.5 py-2 text-[12.5px] font-semibold text-[#d8d2ff] transition hover:bg-[#5b45f0]/30 hover:text-white">
+      <span>View: Student Portal</span>
+      <span class="font-mono text-xs">TPO Admin ↗</span>
+    </button>
+
+    <div class="flex items-center gap-2.5 px-1.5 py-1 text-white">
+      <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#2a2f55] text-[13.5px] font-bold text-white">
+        {{ portal.studentDisplayInfo().initials }}
+      </div>
+      <div class="min-w-0">
+        <b class="block truncate font-semibold">{{ portal.studentDisplayInfo().fullName }}</b>
+        <div class="truncate text-[13px] text-[#8b91ad]">
+          {{ portal.studentDisplayInfo().degree }} · {{ portal.studentDisplayInfo().batchYear }} · {{ portal.studentDisplayInfo().cgpa }}
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>

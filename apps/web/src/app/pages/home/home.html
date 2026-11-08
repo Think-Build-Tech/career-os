@@ -1,0 +1,238 @@
+<!-- src/app/pages/home/home.component.html -->
+<section class="block">
+  <!-- Header -->
+  <div class="mb-5 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="mb-1 text-[26px] font-bold leading-tight tracking-[-0.025em] text-[#12162b] max-md:text-[22px]">
+        Good morning, {{ firstName() }}
+      </h1>
+      <p class="text-[15px] text-[#5a6177]">
+        Command Center · You have {{ pendingActions().length }} time-sensitive placement actions.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        (click)="portal.openActionModalOrDrawer('preflight')"
+        class="inline-flex min-h-[38px] items-center justify-center rounded-lg border border-[#e3e6ef] bg-white px-3.5 py-2 text-[13.5px] font-semibold text-[#12162b] hover:bg-[#f9fafc]">
+        System Pre-Flight Check
+      </button>
+      <button
+        type="button"
+        (click)="portal.navigateToPage('apps', undefined, 'offers')"
+        class="inline-flex min-h-[38px] items-center justify-center rounded-lg bg-[#4a33e0] px-3.5 py-2 text-[13.5px] font-semibold text-white shadow-sm hover:brightness-110">
+        Review Offers
+      </button>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <!-- SLA Queue -->
+    <div class="rounded-xl border border-[#2e366e] bg-gradient-to-br from-[#141836] to-[#1f2552] p-5 text-white shadow-sm">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-3.5">
+        <div>
+          <h2 class="m-0 text-[16.5px] font-bold text-white">Priority SLA Action Queue</h2>
+          <p class="text-[13px] text-white/80">
+            Missing mandatory placement cell SLAs may result in compliance strikes under institutional policy.
+          </p>
+        </div>
+        <span class="rounded-md bg-[#1e2445] px-2 py-0.5 font-mono text-xs font-semibold text-white">
+          {{ compliance()?.active_strikes ?? 0 }}/{{ compliance()?.max_allowed_strikes ?? 2 }} No-Show Strikes
+        </span>
+      </div>
+
+      @for (item of pendingActions(); track item.id) {
+        <div class="mt-2.5 flex flex-wrap items-center justify-between gap-3.5 rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 first:mt-0">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <b class="font-semibold">{{ item.title }}</b>
+              <span class="rounded-md border border-amber-500/35 bg-amber-500/20 px-2 py-0.5 font-mono text-xs font-semibold text-amber-400">
+                Due: {{ item.deadline | date:'dd MMM, hh:mm a' }}
+              </span>
+            </div>
+            <p class="mt-1 text-[13px] text-white/85">{{ item.subtitle || item.action_type }}</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              (click)="portal.navigateToPage('msgs')"
+              class="rounded-lg border border-white/20 bg-white/10 px-3.5 py-2 text-[13.5px] font-semibold text-white hover:bg-white/20">
+              Prep with TACIE
+            </button>
+            <button
+              type="button"
+              (click)="completeSla(item)"
+              class="rounded-lg bg-white px-3.5 py-2 text-[13.5px] font-semibold text-[#141836] hover:brightness-95">
+              Confirm & Complete
+            </button>
+          </div>
+        </div>
+      } @empty {
+        <div class="rounded-[10px] border border-white/15 bg-white/5 p-3.5 text-[13.5px] text-white/80">
+          ✓ Zero pending SLA actions in your queue.
+        </div>
+      }
+    </div>
+
+    <!-- Readiness + Schedule Grid -->
+    <div class="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
+      <!-- Career Readiness -->
+      <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+        <div class="flex items-start justify-between gap-3.5">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class="m-0 text-[16.5px] font-bold text-[#12162b]">Career Readiness</h2>
+              @if (skillGap()?.cohort_percentile_label) {
+                <span class="rounded-md bg-[#e6f6ef] px-2 py-0.5 text-xs font-semibold text-[#127a55]">
+                  {{ skillGap()?.cohort_percentile_label }}
+                </span>
+              }
+            </div>
+            <p class="mt-1 text-[13px] text-[#5a6177]">{{ skillGap()?.benchmark_summary }}</p>
+          </div>
+          <div
+            class="grid h-[86px] w-[86px] shrink-0 place-items-center rounded-full"
+            [style.background]="'conic-gradient(#4a33e0 ' + (skillGap()?.overall_readiness_score ?? 82) + '%, #e3e6ef 0)'">
+            <b class="grid h-[66px] w-[66px] place-items-center rounded-full bg-white text-xl font-bold">
+              {{ skillGap()?.overall_readiness_score ?? 82 }}%
+            </b>
+          </div>
+        </div>
+
+        <div class="my-3.5 flex flex-wrap items-center justify-between gap-2.5 rounded-lg bg-[#f3f4f8] px-3 py-2.5">
+          <span class="text-[13px] font-semibold">Target Role Benchmark:</span>
+          <div class="flex gap-0.5 rounded-lg bg-[#e5e8f2] p-[3px]">
+            @for (r of roleBenchmarks; track r.key) {
+              <button
+                type="button"
+                (click)="switchRoleBenchmark(r.key, r.roleName)"
+                [ngClass]="selectedRoleKey() === r.key ? 'bg-white text-[#12162b] shadow-sm' : 'text-[#5a6177]'"
+                class="rounded-md px-3 py-1.5 text-[13px] font-semibold transition">
+                {{ r.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2.5">
+          @for (b of skillGap()?.breakdown ?? []; track b.label) {
+            <div>
+              <div class="flex justify-between text-[13px]">
+                <span>{{ b.label }}</span>
+                <b>{{ b.score_percentage }}%</b>
+              </div>
+              <div class="mt-1.5 h-[7px] overflow-hidden rounded-full bg-[#f3f4f8]">
+                <i
+                  class="block h-full rounded-full"
+                  [ngClass]="getBarToneClass(b.tone)"
+                  [style.width.%]="b.score_percentage"></i>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="mt-3.5 flex items-center justify-between border-t border-[#e3e6ef] pt-3.5">
+          <div>
+            <b class="text-[14px]">{{ skillGap()?.highest_roi_action?.title || 'AWS Fundamentals Assessment' }}</b>
+            <div class="text-[13px] text-[#5a6177]">{{ skillGap()?.highest_roi_action?.subtitle || 'Verifies cloud deployment gap' }}</div>
+          </div>
+          <button
+            type="button"
+            (click)="portal.navigateToPage('grow', 'assess')"
+            class="rounded-lg bg-[#4a33e0] px-2.5 py-1.5 text-[12.5px] font-semibold text-white">
+            Start Test
+          </button>
+        </div>
+      </div>
+
+      <!-- Schedule & ERP Conflict Check -->
+      <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+        <div class="mb-2.5 flex items-center justify-between">
+          <div>
+            <h2 class="m-0 text-[16.5px] font-bold text-[#12162b]">Schedule & ERP Conflict Check</h2>
+            <p class="text-[13px] text-[#5a6177]">Synced with Academic Timetable & Exam Cell</p>
+          </div>
+          <span class="rounded-md bg-[#e6f6ef] px-2 py-0.5 text-xs font-semibold text-[#127a55]">
+            {{ conflicts()?.conflicting_events?.length ?? 0 }} Conflicts
+          </span>
+        </div>
+
+        <div class="mb-3 rounded-[10px] border border-[#ccebdd] bg-[#e6f6ef] px-3 py-2 text-[12.5px] text-[#127a55]">
+          <b>✓ Registrar Timetable Verified:</b> {{ conflicts()?.summary_message || 'No internal lab exams clash with your scheduled interviews.' }}
+        </div>
+
+        @for (ev of events(); track ev.id) {
+          <div class="flex items-center justify-between gap-3 border-t border-[#e3e6ef] py-3 first:border-t-0">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="rounded bg-[#eeebff] px-2 py-0.5 font-mono text-xs font-semibold text-[#4a33e0]">
+                  {{ ev.starts_at | date:'EEE dd MMM · HH:mm' }}
+                </span>
+                <b class="text-[14px]">{{ ev.title }}</b>
+              </div>
+              <div class="mt-0.5 text-[13px] text-[#5a6177]">{{ ev.subtitle || ev.event_type }}</div>
+            </div>
+            <button
+              type="button"
+              (click)="portal.openActionModalOrDrawer('preflight', ev)"
+              class="rounded-lg border border-[#e3e6ef] bg-white px-2.5 py-1 text-[12.5px] font-semibold hover:bg-[#f9fafc]">
+              Manage
+            </button>
+          </div>
+        }
+
+        <div class="mt-3 flex justify-between border-t border-[#e3e6ef] pt-3">
+          <button type="button" (click)="portal.showToast('Exported .ICS feed')" class="text-[13.5px] font-semibold text-[#4a33e0] hover:underline">
+            Export .ICS Calendar Feed
+          </button>
+          <button type="button" (click)="portal.navigateToPage('apps')" class="text-[13.5px] font-semibold text-[#4a33e0] hover:underline">
+            Open Full Pipeline →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- High-Match Active Drives -->
+    <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+      <div class="mb-2 flex items-center justify-between">
+        <div>
+          <h2 class="m-0 text-[16.5px] font-bold">High-Match Active Drives</h2>
+          <p class="text-[13px] text-[#5a6177]">Pre-screened against your verified {{ portal.studentDisplayInfo().cgpa }} CGPA and zero backlogs.</p>
+        </div>
+        <button type="button" (click)="portal.navigateToPage('jobs')" class="text-[13.5px] font-semibold text-[#4a33e0] hover:underline">
+          Explore all {{ portal.totalOpenJobsCount() }} drives →
+        </button>
+      </div>
+
+      @for (job of priorityDrives(); track job.id) {
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3.5 border-t border-[#e3e6ef] pt-3 first:border-t-0 first:pt-0">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <b class="font-semibold">{{ job.title }} · {{ job.company_name }}</b>
+              @if (job.tier_label) {
+                <span class="rounded bg-[#eeebff] px-2 py-0.5 text-xs font-semibold text-[#4a33e0]">{{ job.tier_label }}</span>
+              }
+            </div>
+            <div class="text-[13px] text-[#5a6177]">
+              {{ job.location }} · ₹{{ (job.total_ctc / 100000) | number:'1.0-1' }} LPA · Job ID:
+              <span class="font-mono text-xs">{{ job.job_code || job.id.slice(0, 8) }}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-3.5">
+            @if (job.match_score) {
+              <div class="text-right text-lg font-bold leading-none text-[#4a33e0]">
+                {{ job.match_score }}%<small class="block text-[11.5px] font-medium text-[#5a6177]">match</small>
+              </div>
+            }
+            <button
+              type="button"
+              (click)="portal.navigateToPage('jobs')"
+              class="rounded-lg bg-[#4a33e0] px-3 py-1.5 text-[12.5px] font-semibold text-white">
+              Inspect & Apply
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</section>

@@ -1,0 +1,100 @@
+# ==============================================================================
+# CareerOS Multi-Tenant Architecture Docker Compose
+# Services:
+#   1. postgres : PostgreSQL 17 multi-database engine (careeros_dev + tenant DBs)
+#   2. api      : CareerOS Node.js / Express API with auto-provisioning engine
+#   3. web      : CareerOS Angular 19 SPA with Nginx reverse proxy
+# ==============================================================================
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: careeros-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: careeros_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - careeros-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d careeros_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - careeros-network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: careeros-api
+    restart: unless-stopped
+    environment:
+      PORT: "5000"
+      HOST: "0.0.0.0"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_NAME: "careeros_dev"
+      DB_USER: "postgres"
+      DB_PASSWORD: "admin"
+      DB_DIALECT: "postgres"
+      DB_SYNC: "false"
+      AI_SERVICE_URL: "http://ai-framework:8000"
+      AI_SERVICE_API_KEY: "local-dev-careeros-ai-token"
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - careeros-network
+
+  ai-framework:
+    build:
+      context: ./apps/ai-framework
+      dockerfile: Dockerfile
+    container_name: careeros-ai-framework
+    restart: unless-stopped
+    env_file:
+      - ./apps/ai-framework/.env
+    environment:
+      APP_ENV: "development"
+      AURORA_DB_HOST: "postgres"
+      AURORA_DB_PORT: "5432"
+      AURORA_DB_NAME: "careeros_dev"
+      AURORA_DB_USER: "postgres"
+      AURORA_DB_PASSWORD: "admin"
+      AURORA_DB_SSLMODE: "disable"
+      AI_SERVICE_API_KEYS: "careeros-api=local-dev-careeros-ai-token"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - careeros-network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: careeros-web
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+    networks:
+      - careeros-network
+
+volumes:
+  careeros-pgdata:
+    driver: local
+
+networks:
+  careeros-network:
+    driver: bridge
+

@@ -1,0 +1,1965 @@
+<div class="platform-console">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <div class="brand-copy">
+        <b>CareerOS</b>
+        <span>PLATFORM CONSOLE</span>
+      </div>
+    </div>
+
+    <!-- Active College Tenant Badge & DB Isolation Indicator -->
+    <div class="tenant-pill-badge" (click)="state.openCollegeLoginModal()" title="Click to resolve and switch college tenant database">
+      <div class="tenant-pill-top">
+        <span>ACTIVE COLLEGE TENANT</span>
+        <span>SWITCH ⇄</span>
+      </div>
+      <div class="tenant-pill-name">
+        {{ auth.institutionName() }} ({{ auth.collegeCode() }})
+      </div>
+      <div class="tenant-pill-db">
+        ● DB: {{ auth.databaseName() }} · {{ auth.schemaVersion() }}
+      </div>
+    </div>
+
+    <!-- PLATFORM NAV -->
+    <div class="nav-section">
+      <div class="nav-label">Platform</div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'overview'"
+        (click)="onNavClick('overview')"
+      >
+        <div class="icon">◫</div>
+        <span>Overview</span>
+      </div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'institutions'"
+        (click)="onNavClick('institutions')"
+      >
+        <div class="icon">▦</div>
+        <span>Institutions</span>
+      </div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'onboarding'"
+        (click)="onNavClick('onboarding')"
+      >
+        <div class="icon">＋</div>
+        <span>Onboarding</span>
+      </div>
+    </div>
+
+    <!-- OPERATIONS NAV -->
+    <div class="nav-section">
+      <div class="nav-label">Operations</div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'infrastructure'"
+        (click)="onNavClick('infrastructure')"
+      >
+        <div class="icon">⌘</div>
+        <span>Infrastructure</span>
+      </div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'ai-usage'"
+        (click)="onNavClick('ai-usage')"
+      >
+        <div class="icon">✦</div>
+        <span>AI & Usage</span>
+      </div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'migrations'"
+        (click)="onNavClick('migrations')"
+      >
+        <div class="icon">⇄</div>
+        <span>Migrations</span>
+      </div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'system-status'"
+        (click)="onNavClick('system-status')"
+      >
+        <div class="icon">◎</div>
+        <span>System Status</span>
+      </div>
+    </div>
+
+    <!-- COMMERCIAL NAV -->
+    <div class="nav-section">
+      <div class="nav-label">Commercial</div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'subscriptions'"
+        (click)="onNavClick('subscriptions')"
+      >
+        <div class="icon">₹</div>
+        <span>Subscriptions</span>
+      </div>
+    </div>
+
+    <!-- SECURITY NAV -->
+    <div class="nav-section">
+      <div class="nav-label">Security</div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'admins'"
+        (click)="onNavClick('admins')"
+      >
+        <div class="icon">♙</div>
+        <span>Platform Admins</span>
+      </div>
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'audit'"
+        (click)="onNavClick('audit')"
+      >
+        <div class="icon">≡</div>
+        <span>Audit Logs</span>
+      </div>
+    </div>
+
+    <div class="nav-spacer"></div>
+
+    <!-- FOOTER -->
+    <div class="sidebar-footer">
+      <div
+        class="nav-item"
+        [class.active]="state.activePage() === 'settings'"
+        (click)="onNavClick('settings')"
+      >
+        <div class="icon">⚙</div>
+        <span>Settings</span>
+      </div>
+      <div class="user-box" (click)="state.openCollegeLoginModal()" style="cursor: pointer;" title="Active Super Administrator">
+        <div class="avatar">AB</div>
+        <div class="user-meta">
+          <b>Platform Admin</b>
+          <span>Super Administrator</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb">
+        <span>CareerOS</span>
+        <span>/</span>
+        <b>{{ state.breadcrumb() }}</b>
+      </div>
+      <div class="top-actions">
+        <!-- College Tenant Selector pill -->
+        <button class="btn accent-outline" (click)="state.openCollegeLoginModal()">
+          <span>🏛 {{ auth.institutionName() }} (Code {{ auth.collegeCode() }})</span>
+        </button>
+        <button class="icon-btn" (click)="state.openCollegeLoginModal()" title="Resolve College Tenant">⌕</button>
+        <button class="btn primary" (click)="state.openAddInstitutionDrawer()">+ Add Institution</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ========================================== -->
+      <!-- 1. OVERVIEW PAGE                           -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'overview') {
+        <section class="page">
+          <section class="hero">
+            <div>
+              <div class="eyebrow">Platform operations</div>
+              <h1>Good morning. Here’s CareerOS at a glance.</h1>
+              <div class="subtitle">
+                Monitor institution tenants, provisioning, infrastructure health, usage and platform-wide operations from one console.
+              </div>
+            </div>
+            <button class="btn" (click)="state.showToast('Snapshot report exported to downloads')">Export snapshot</button>
+          </section>
+
+          <!-- 4 KPI Metrics -->
+          <section class="metrics">
+            <article class="metric">
+              <div class="metric-head">
+                <span class="metric-label">Institutions</span>
+                <span class="metric-icon">▦</span>
+              </div>
+              <div class="metric-value">{{ state.dashboardMetrics().metrics.totalInstitutions }}</div>
+              <div class="metric-foot">
+                <span class="delta">+3</span>
+                <span>this month</span>
+              </div>
+            </article>
+            <article class="metric">
+              <div class="metric-head">
+                <span class="metric-label">Active tenants</span>
+                <span class="metric-icon">✓</span>
+              </div>
+              <div class="metric-value">{{ state.dashboardMetrics().metrics.activeInstitutions }}</div>
+              <div class="metric-foot">
+                <span>90.4% of provisioned institutions</span>
+              </div>
+            </article>
+            <article class="metric">
+              <div class="metric-head">
+                <span class="metric-label">Active users</span>
+                <span class="metric-icon">♙</span>
+              </div>
+              <div class="metric-value">26.8K</div>
+              <div class="metric-foot">
+                <span class="delta">+8.4%</span>
+                <span>month over month</span>
+              </div>
+            </article>
+            <article class="metric">
+              <div class="metric-head">
+                <span class="metric-label">Estimated AI cost</span>
+                <span class="metric-icon">✦</span>
+              </div>
+              <div class="metric-value">₹68.4K</div>
+              <div class="metric-foot">
+                <span class="delta down">+6.1%</span>
+                <span>vs previous month</span>
+              </div>
+            </article>
+          </section>
+
+          <!-- 3-Column Layout -->
+          <section class="layout3">
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Tenant health</div>
+                  <div class="card-sub">Current institution lifecycle status</div>
+                </div>
+                <span class="text-link" (click)="state.navigateTo('institutions')">View institutions</span>
+              </div>
+              <div class="card-body">
+                <div class="status-list">
+                  <div class="status-row">
+                    <span class="dot greenDot"></span>
+                    <span>Healthy & active</span>
+                    <span class="count">36</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="dot amberDot"></span>
+                    <span>Provisioning</span>
+                    <span class="count">2</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="dot redDot"></span>
+                    <span>Attention required</span>
+                    <span class="count">3</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="dot grayDot"></span>
+                    <span>Suspended</span>
+                    <span class="count">1</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Infrastructure</div>
+                  <div class="card-sub">Platform service health</div>
+                </div>
+                <span class="badge green">All systems normal</span>
+              </div>
+              <div class="card-body">
+                <div class="health-grid">
+                  <div class="health-item">
+                    <div class="health-top"><span>API availability</span><span>24h</span></div>
+                    <div class="health-value health-ok">99.99%</div>
+                  </div>
+                  <div class="health-item">
+                    <div class="health-top"><span>Database health</span><span>42 / 42</span></div>
+                    <div class="health-value health-ok">Healthy</div>
+                  </div>
+                  <div class="health-item">
+                    <div class="health-top"><span>Background jobs</span><span>Queue</span></div>
+                    <div class="health-value health-ok">Normal</div>
+                  </div>
+                  <div class="health-item">
+                    <div class="health-top"><span>ERP sync</span><span>3 tenants</span></div>
+                    <div class="health-value health-warn">Degraded</div>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Monthly usage</div>
+                  <div class="card-sub">Across all institutions</div>
+                </div>
+                <span class="text-link" (click)="state.navigateTo('ai-usage')">AI & Usage</span>
+              </div>
+              <div class="card-body">
+                <div class="usage-list">
+                  <div class="usage-row">
+                    <div>
+                      <span>AI requests</span>
+                      <div class="bar"><i style="width:74%"></i></div>
+                    </div>
+                    <b>72.4K</b>
+                  </div>
+                  <div class="usage-row">
+                    <div>
+                      <span>Embedding jobs</span>
+                      <div class="bar"><i style="width:48%"></i></div>
+                    </div>
+                    <b>9.3K</b>
+                  </div>
+                  <div class="usage-row">
+                    <div>
+                      <span>Messages</span>
+                      <div class="bar"><i style="width:88%"></i></div>
+                    </div>
+                    <b>184K</b>
+                  </div>
+                  <div class="usage-row">
+                    <div>
+                      <span>Assessments</span>
+                      <div class="bar"><i style="width:57%"></i></div>
+                    </div>
+                    <b>12.8K</b>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <!-- Institutions Table -->
+          <section class="card table-card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">Institutions</div>
+                <div class="card-sub">Monitor and manage tenant workspaces</div>
+              </div>
+              <div class="table-tools">
+                <div class="search">
+                  <span>⌕</span>
+                  <input
+                    placeholder="Search institutions or code..."
+                    [value]="state.institutionsSearchQuery()"
+                    (input)="onInstitutionSearch($event)"
+                  />
+                </div>
+                <button class="filter-chip">All status ▾</button>
+              </div>
+            </div>
+            <div style="overflow:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Institution</th>
+                    <th>Code</th>
+                    <th>Status</th>
+                    <th>Users</th>
+                    <th>Database</th>
+                    <th>Plan</th>
+                    <th>AI usage</th>
+                    <th>Last active</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (tenant of state.filteredTenants(); track tenant.id) {
+                    <tr>
+                      <td>
+                        <div class="institution-cell">
+                          <div class="college-logo">{{ tenant.name.substring(0, 2).toUpperCase() }}</div>
+                          <div>
+                            <b>{{ tenant.name }}</b>
+                            <span>{{ tenant.slug }}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td><span class="code">{{ tenant.college_code }}</span></td>
+                      <td>
+                        @if (tenant.status === 'ACTIVE') {
+                          <span class="badge green">● Active</span>
+                        } @else if (tenant.status === 'PROVISIONING') {
+                          <span class="badge amber">● Provisioning</span>
+                        } @else if (tenant.status === 'ATTENTION') {
+                          <span class="badge red">● Attention</span>
+                        } @else {
+                          <span class="badge gray">● Suspended</span>
+                        }
+                      </td>
+                      <td>{{ tenant.user_count || '—' }}</td>
+                      <td>
+                        @if (tenant.database?.status === 'Healthy' || tenant.status === 'ACTIVE') {
+                          <span class="badge green">Healthy</span>
+                        } @else if (tenant.status === 'PROVISIONING') {
+                          <span class="badge amber">Creating</span>
+                        } @else if (tenant.status === 'ATTENTION') {
+                          <span class="badge red">Migration issue</span>
+                        } @else {
+                          <span class="badge gray">Paused</span>
+                        }
+                      </td>
+                      <td>{{ tenant.plan_code || 'Standard' }}</td>
+                      <td>{{ tenant.ai_usage_count || '—' }}</td>
+                      <td>{{ tenant.last_active_at || 'Just now' }}</td>
+                      <td>
+                        <button class="kebab" (click)="quickSelectCollege(tenant.college_code)" title="Resolve & Switch to this college tenant">⋯</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Bottom Grid: Recent Activity & Attention -->
+          <section class="bottom-grid">
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Recent platform activity</div>
+                  <div class="card-sub">Provisioning, integrations and configuration events</div>
+                </div>
+                <span class="text-link" (click)="state.navigateTo('audit')">Audit logs</span>
+              </div>
+              <div class="card-body">
+                <div class="activity">
+                  <div class="activity-item">
+                    <div class="activity-icon">✓</div>
+                    <div class="activity-copy">
+                      <b>ERP synchronization completed</b>
+                      <span>SITRC · 3,214 student records synchronized successfully.</span>
+                    </div>
+                    <div class="activity-time">6 min</div>
+                  </div>
+                  <div class="activity-item">
+                    <div class="activity-icon">＋</div>
+                    <div class="activity-copy">
+                      <b>New institution provisioning started</b>
+                      <span>XYZ Institute of Technology · Database creation in progress.</span>
+                    </div>
+                    <div class="activity-time">18 min</div>
+                  </div>
+                  <div class="activity-item">
+                    <div class="activity-icon">⇄</div>
+                    <div class="activity-copy">
+                      <b>Schema migration completed</b>
+                      <span>ABC College of Engineering · v26 → v27.</span>
+                    </div>
+                    <div class="activity-time">42 min</div>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Needs attention</div>
+                  <div class="card-sub">Issues requiring administrator action</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="attention">
+                  <div class="attention-item">
+                    <div class="attention-left">
+                      <div class="attention-symbol">!</div>
+                      <div class="attention-copy">
+                        <b>Migration failed</b>
+                        <span>DEF College · schema v27</span>
+                      </div>
+                    </div>
+                    <button class="mini-btn" (click)="state.navigateTo('migrations')">Review</button>
+                  </div>
+                  <div class="attention-item">
+                    <div class="attention-left">
+                      <div class="attention-symbol">!</div>
+                      <div class="attention-copy">
+                        <b>ERP sync delayed</b>
+                        <span>3 institutions affected</span>
+                      </div>
+                    </div>
+                    <button class="mini-btn" (click)="state.navigateTo('system-status')">Inspect</button>
+                  </div>
+                  <div class="attention-item">
+                    <div class="attention-left">
+                      <div class="attention-symbol">!</div>
+                      <div class="attention-copy">
+                        <b>Storage above 85%</b>
+                        <span>ABC College of Engineering</span>
+                      </div>
+                    </div>
+                    <button class="mini-btn" (click)="state.navigateTo('infrastructure')">View</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </section>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 2. INSTITUTIONS PAGE                       -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'institutions') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">Tenant management</div>
+              <h1>Institutions</h1>
+              <div class="subtitle">
+                Manage every college tenant, its database health, plan, activity and operational state.
+              </div>
+            </div>
+            <button class="btn primary" (click)="state.openAddInstitutionDrawer()">+ Add Institution</button>
+          </div>
+
+          <div class="four-col" style="margin-bottom:16px">
+            <div class="stat-card">
+              <div class="label">Total institutions</div>
+              <div class="value">42</div>
+              <div class="hint">Across all plans</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Active</div>
+              <div class="value">38</div>
+              <div class="hint">90.4% of provisioned tenants</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Provisioning</div>
+              <div class="value">2</div>
+              <div class="hint">1 awaiting administrator invite</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Needs attention</div>
+              <div class="value">3</div>
+              <div class="hint">Migration, storage or ERP issues</div>
+            </div>
+          </div>
+
+          <section class="card table-card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">All institutions</div>
+                <div class="card-sub">Search by institution, code or city</div>
+              </div>
+              <div class="table-tools">
+                <div class="search">
+                  <span>⌕</span>
+                  <input
+                    placeholder="Search..."
+                    [value]="state.institutionsSearchQuery()"
+                    (input)="onInstitutionSearch($event)"
+                  />
+                </div>
+                <button class="filter-chip">Plan ▾</button>
+                <button class="filter-chip">Status ▾</button>
+              </div>
+            </div>
+            <div style="overflow:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Institution</th>
+                    <th>Code</th>
+                    <th>Status</th>
+                    <th>Users</th>
+                    <th>DB</th>
+                    <th>Plan</th>
+                    <th>Storage</th>
+                    <th>AI cost</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (tenant of state.filteredTenants(); track tenant.id) {
+                    <tr>
+                      <td>
+                        <div class="institution-cell">
+                          <div class="college-logo">{{ tenant.name.substring(0, 2).toUpperCase() }}</div>
+                          <div>
+                            <b>{{ tenant.name }}</b>
+                            <span>{{ tenant.slug }}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td><span class="code">{{ tenant.college_code }}</span></td>
+                      <td>
+                        <span class="badge" [class.green]="tenant.status === 'ACTIVE'" [class.amber]="tenant.status === 'PROVISIONING'" [class.red]="tenant.status === 'ATTENTION'" [class.gray]="tenant.status === 'SUSPENDED'">
+                          {{ tenant.status }}
+                        </span>
+                      </td>
+                      <td>{{ tenant.user_count || '—' }}</td>
+                      <td>
+                        <span class="badge" [class.green]="tenant.status === 'ACTIVE'" [class.amber]="tenant.status === 'PROVISIONING'" [class.red]="tenant.status === 'ATTENTION'">
+                          {{ tenant.database?.status || 'Healthy' }}
+                        </span>
+                      </td>
+                      <td>{{ tenant.plan_code || 'Standard' }}</td>
+                      <td>{{ tenant.storage_gb || '—' }}</td>
+                      <td>{{ tenant.ai_cost_inr || '—' }}</td>
+                      <td>
+                        <button class="mini-btn" (click)="quickSelectCollege(tenant.college_code)">Manage</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 3. ONBOARDING PAGE                         -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'onboarding') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">Tenant lifecycle</div>
+              <h1>Onboarding</h1>
+              <div class="subtitle">
+                Track new institutions from initial setup through database provisioning and activation.
+              </div>
+            </div>
+            <button class="btn primary" (click)="state.openAddInstitutionDrawer()">+ Start onboarding</button>
+          </div>
+
+          <div class="three-col" style="margin-bottom:16px">
+            <div class="stat-card">
+              <div class="label">In progress</div>
+              <div class="value">4</div>
+              <div class="hint">Across setup and provisioning</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Awaiting action</div>
+              <div class="value">2</div>
+              <div class="hint">Administrator invite / ERP configuration</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Completed this month</div>
+              <div class="value">3</div>
+              <div class="hint">Average setup time 19 min</div>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Onboarding queue</div>
+                  <div class="card-sub">Current tenant setup progress</div>
+                </div>
+              </div>
+              <div class="card-body list-clean">
+                @for (job of state.provisioningJobs(); track job.id) {
+                  <div class="list-row">
+                    <div>
+                      <b>{{ job.tenant_name }}</b>
+                      <span>{{ job.current_step }}</span>
+                      <div class="progress-line">
+                        <i [style.width.%]="job.progress_percentage || 50"></i>
+                      </div>
+                    </div>
+                    <span class="badge" [class.amber]="job.status === 'RUNNING'" [class.gray]="job.status === 'QUEUED'" [class.green]="job.status === 'COMPLETED'">
+                      {{ job.status }}
+                    </span>
+                  </div>
+                }
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Provisioning pipeline</div>
+                  <div class="card-sub">Standard steps for every institution</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="status-list">
+                  <div class="status-row">
+                    <span class="dot greenDot"></span>
+                    <span class="name">Register tenant + allocate code</span>
+                    <span class="count">01</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="dot greenDot"></span>
+                    <span class="name">Create PostgreSQL database</span>
+                    <span class="count">02</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="dot greenDot"></span>
+                    <span class="name">Apply schema migrations</span>
+                    <span class="count">03</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="dot amberDot"></span>
+                    <span class="name">Create institution + roles</span>
+                    <span class="count">04</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="dot grayDot"></span>
+                    <span class="name">Create administrator</span>
+                    <span class="count">05</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="dot grayDot"></span>
+                    <span class="name">Configure departments</span>
+                    <span class="count">06</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="dot grayDot"></span>
+                    <span class="name">Activate tenant</span>
+                    <span class="count">07</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 4. INFRASTRUCTURE PAGE                     -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'infrastructure') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">Operations</div>
+              <h1>Infrastructure</h1>
+              <div class="subtitle">Observe database health, storage, backups and tenant resource utilization.</div>
+            </div>
+            <button class="btn" (click)="state.showToast('Infrastructure report generated')">Download health report</button>
+          </div>
+
+          <div class="four-col" style="margin-bottom:16px">
+            <div class="stat-card">
+              <div class="label">Databases</div>
+              <div class="value">42 / 42</div>
+              <div class="hint">Reachable</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Avg CPU</div>
+              <div class="value">23%</div>
+              <div class="hint">Across tenant databases</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Storage used</div>
+              <div class="value">1.12 TB</div>
+              <div class="hint">68% of allocated capacity</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Backup success</div>
+              <div class="value">100%</div>
+              <div class="hint">Last 24 hours</div>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Database health</div>
+                  <div class="card-sub">Tenant database isolation overview</div>
+                </div>
+              </div>
+              <div class="card-body list-clean">
+                <div class="list-row">
+                  <div>
+                    <b>SITRC</b>
+                    <span class="mono">careeros_sitrc · PostgreSQL 17 · schema v28</span>
+                  </div>
+                  <span class="badge green">Healthy</span>
+                </div>
+                <div class="list-row">
+                  <div>
+                    <b>ABC College</b>
+                    <span class="mono">careeros_abc · PostgreSQL 17 · schema v28</span>
+                  </div>
+                  <span class="badge green">Healthy</span>
+                </div>
+                <div class="list-row">
+                  <div>
+                    <b>DEF College</b>
+                    <span class="mono">careeros_def · PostgreSQL 17 · schema v26</span>
+                  </div>
+                  <span class="badge red">Migration issue</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Storage by tenant</div>
+                  <div class="card-sub">Largest consumers this month</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="usage-list">
+                  <div class="usage-row">
+                    <div><span>ABC College</span><div class="bar"><i style="width:84%"></i></div></div>
+                    <b>42.2 GB</b>
+                  </div>
+                  <div class="usage-row">
+                    <div><span>SITRC</span><div class="bar"><i style="width:38%"></i></div></div>
+                    <b>18.7 GB</b>
+                  </div>
+                  <div class="usage-row">
+                    <div><span>DEF College</span><div class="bar"><i style="width:31%"></i></div></div>
+                    <b>15.6 GB</b>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 5. AI & USAGE PAGE (FULL DRILLDOWN)       -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'ai-usage') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">TACIE operations</div>
+              <h1>AI & Usage</h1>
+              <div class="subtitle">
+                Monitor platform-wide AI consumption, then drill into each institution and department to understand requests, token usage, embeddings and estimated spend.
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn">Oct 2026 ▾</button>
+              <button class="btn" (click)="state.showToast('Usage CSV downloaded')">Export usage</button>
+            </div>
+          </div>
+
+          <div class="four-col" style="margin-bottom:16px">
+            <div class="stat-card">
+              <div class="label">AI requests</div>
+              <div class="value">72.4K</div>
+              <div class="hint"><span class="delta">+11.8%</span> vs previous month</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Total tokens</div>
+              <div class="value">181.2M</div>
+              <div class="hint">164M input · 17.2M output</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Embedding tokens</div>
+              <div class="value">22.8M</div>
+              <div class="hint">Resume, JD, projects and learning</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Estimated AI cost</div>
+              <div class="value">₹68.4K</div>
+              <div class="hint">Across 42 institution tenants</div>
+            </div>
+          </div>
+
+          <div class="two-col" style="margin-bottom:16px">
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Platform usage trend</div>
+                  <div class="card-sub">Illustrative weekly AI request volume</div>
+                </div>
+                <span class="pill">Requests</span>
+              </div>
+              <div class="card-body">
+                <div class="empty-chart ai-trend-chart">
+                  <i style="height:36%"></i>
+                  <i style="height:52%"></i>
+                  <i style="height:47%"></i>
+                  <i style="height:66%"></i>
+                  <i style="height:74%"></i>
+                  <i style="height:68%"></i>
+                  <i style="height:84%"></i>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Platform workload mix</div>
+                  <div class="card-sub">Requests grouped by TACIE capability</div>
+                </div>
+              </div>
+              <div class="card-body usage-workload-grid">
+                <div class="ai-workload">
+                  <div><b>Resume analysis</b><span>12,482 requests</span></div>
+                  <strong>17.2%</strong>
+                </div>
+                <div class="ai-workload">
+                  <div><b>Resume & JD chat</b><span>15,941 requests</span></div>
+                  <strong>22.0%</strong>
+                </div>
+                <div class="ai-workload">
+                  <div><b>Candidate matching</b><span>8,844 requests</span></div>
+                  <strong>12.2%</strong>
+                </div>
+                <div class="ai-workload">
+                  <div><b>Skill gap analysis</b><span>8,191 requests</span></div>
+                  <strong>11.3%</strong>
+                </div>
+                <div class="ai-workload">
+                  <div><b>Moderation</b><span>8,235 requests</span></div>
+                  <strong>11.4%</strong>
+                </div>
+                <div class="ai-workload">
+                  <div><b>Other TACIE tasks</b><span>18,707 requests</span></div>
+                  <strong>25.9%</strong>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- AI Usage Accordion Drilldown -->
+          <section class="card ai-tenant-card">
+            <div class="card-head ai-tenant-head">
+              <div>
+                <div class="card-title">AI usage by institution</div>
+                <div class="card-sub">Expand an institution to inspect department-level consumption and workload distribution.</div>
+              </div>
+              <div class="table-tools">
+                <div class="search ai-tenant-search">
+                  <span>⌕</span>
+                  <input
+                    placeholder="Search tenant or college code..."
+                    [value]="state.aiTenantSearchQuery()"
+                    (input)="onAiSearch($event)"
+                  />
+                </div>
+                <button class="filter-chip">All plans ▾</button>
+                <button class="filter-chip">Sort: Cost ↓</button>
+              </div>
+            </div>
+
+            <div class="ai-tenant-list">
+              @for (aiTenant of state.filteredAiTenants(); track aiTenant.tenant_id) {
+                <article class="ai-tenant" [class.open]="state.expandedAiTenants().has(aiTenant.tenant_id)">
+                  <button class="ai-tenant-summary" type="button" (click)="state.toggleAiTenant(aiTenant.tenant_id)">
+                    <div class="ai-tenant-identity">
+                      <div class="college-logo">{{ aiTenant.institution_name.substring(0, 2).toUpperCase() }}</div>
+                      <div>
+                        <b>{{ aiTenant.institution_name }}</b>
+                        <span>Code {{ aiTenant.college_code }} · {{ aiTenant.plan }} · {{ aiTenant.department_count }} departments</span>
+                      </div>
+                    </div>
+                    <div class="ai-tenant-metric"><span>Requests</span><b>{{ aiTenant.total_requests }}</b></div>
+                    <div class="ai-tenant-metric"><span>Total tokens</span><b>{{ aiTenant.total_tokens }}</b></div>
+                    <div class="ai-tenant-metric"><span>Embedding tokens</span><b>{{ aiTenant.embedding_tokens }}</b></div>
+                    <div class="ai-tenant-metric"><span>AI cost</span><b>{{ aiTenant.estimated_cost_inr }}</b></div>
+                    <div class="ai-budget">
+                      <div class="ai-budget-top"><span>Budget</span><b>{{ aiTenant.budget_used_percentage }}%</b></div>
+                      <div class="progress-line" [class.warning]="aiTenant.budget_used_percentage > 70">
+                        <i [style.width.%]="aiTenant.budget_used_percentage"></i>
+                      </div>
+                    </div>
+                    <span class="ai-expand">⌄</span>
+                  </button>
+
+                  <!-- Expanded Department Table -->
+                  @if (state.expandedAiTenants().has(aiTenant.tenant_id)) {
+                    <div class="ai-tenant-detail">
+                      <div class="ai-detail-top">
+                        <div>
+                          <div class="ai-detail-title">{{ aiTenant.institution_name }} department breakdown</div>
+                          <div class="ai-detail-sub">
+                            Usage is attributed to the department scope of the user or resource that triggered the AI operation.
+                          </div>
+                        </div>
+                        <div class="ai-mini-summary">
+                          <span><b>2.56K</b> avg. tokens/request</span>
+                          <span><b>94.2%</b> successful runs</span>
+                          <span><b>₹0.99</b> avg. cost/request</span>
+                        </div>
+                      </div>
+
+                      <div class="ai-dept-table-wrap">
+                        <table class="ai-dept-table">
+                          <thead>
+                            <tr>
+                              <th>Department</th>
+                              <th>Requests</th>
+                              <th>Input tokens</th>
+                              <th>Output tokens</th>
+                              <th>Embeddings</th>
+                              <th>Estimated cost</th>
+                              <th>Share</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (dept of aiTenant.departments; track dept.department_id) {
+                              <tr class="ai-dept-row">
+                                <td>
+                                  <b>{{ dept.department_name }}</b>
+                                  <span>{{ dept.student_count }} students</span>
+                                </td>
+                                <td>{{ dept.requests }}</td>
+                                <td>{{ dept.input_tokens }}</td>
+                                <td>{{ dept.output_tokens }}</td>
+                                <td>{{ dept.embedding_tokens }}</td>
+                                <td>{{ dept.estimated_cost_inr }}</td>
+                                <td>{{ dept.share_percentage }}</td>
+                                <td>
+                                  <button class="mini-btn ai-dept-toggle" type="button" (click)="state.toggleAiDept(dept.department_id)">
+                                    {{ state.expandedAiDepts().has(dept.department_id) ? 'Hide' : 'Details' }}
+                                  </button>
+                                </td>
+                              </tr>
+
+                              <!-- Expanded Dept Detail Block -->
+                              @if (state.expandedAiDepts().has(dept.department_id)) {
+                                <tr class="ai-dept-detail-row open">
+                                  <td colspan="8">
+                                    <div class="ai-dept-detail">
+                                      <div class="ai-dept-detail-block">
+                                        <div class="ai-detail-label">Workload mix</div>
+                                        <div class="ai-feature-bars">
+                                          @for (w of dept.workload_mix; track w.feature_name) {
+                                            <div>
+                                              <span>{{ w.feature_name }}</span>
+                                              <b>{{ w.request_count }}</b>
+                                              <div class="bar"><i [style.width.%]="w.percentage || 50"></i></div>
+                                            </div>
+                                          }
+                                        </div>
+                                      </div>
+                                      <div class="ai-dept-detail-block">
+                                        <div class="ai-detail-label">Model usage</div>
+                                        <div class="ai-model-grid">
+                                          <div><span>Fast / low-cost</span><b>{{ dept.model_usage.fast_percentage }}%</b></div>
+                                          <div><span>Reasoning</span><b>{{ dept.model_usage.reasoning_percentage }}%</b></div>
+                                          <div><span>Advanced</span><b>{{ dept.model_usage.advanced_percentage }}%</b></div>
+                                        </div>
+                                        <div class="ai-detail-label" style="margin-top:14px">Top consumers</div>
+                                        <div class="ai-inline-list">
+                                          <span>Student resume chat <b>38%</b></span>
+                                          <span>Recruiter candidate search <b>21%</b></span>
+                                          <span>TPO bulk analysis <b>18%</b></span>
+                                        </div>
+                                      </div>
+                                      <div class="ai-dept-detail-block">
+                                        <div class="ai-detail-label">Quality & safety</div>
+                                        <div class="ai-model-grid">
+                                          <div><span>Failed runs</span><b>{{ dept.quality.failed_runs_percentage }}</b></div>
+                                          <div><span>Flagged chats</span><b>{{ dept.quality.flagged_chats }}</b></div>
+                                          <div><span>Avg latency</span><b>{{ dept.quality.avg_latency_seconds }}</b></div>
+                                        </div>
+                                        <div class="ai-detail-note">
+                                          {{ dept.quality.flagged_chats }} messages were evaluated by moderation safety filters.
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              }
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          </section>
+
+          <!-- Bottom Cards -->
+          <div class="two-col" style="margin-top:16px">
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Highest-cost departments</div>
+                  <div class="card-sub">Across all institution tenants</div>
+                </div>
+                <span class="text-link">View all</span>
+              </div>
+              <div class="card-body list-clean">
+                <div class="list-row">
+                  <div><b>SITRC · Computer Engineering</b><span>6,842 requests · 20.4M total + embedding tokens</span></div>
+                  <span class="pill">₹6,740</span>
+                </div>
+                <div class="list-row">
+                  <div><b>ABC College · Computer Engineering</b><span>4,916 requests · 13.6M total + embedding tokens</span></div>
+                  <span class="pill">₹4,721</span>
+                </div>
+                <div class="list-row">
+                  <div><b>DEF College · Computer Engineering</b><span>4,162 requests · 11.9M total + embedding tokens</span></div>
+                  <span class="pill">₹4,318</span>
+                </div>
+                <div class="list-row">
+                  <div><b>SITRC · AI & Data Science</b><span>4,118 requests · 12.8M total + embedding tokens</span></div>
+                  <span class="pill">₹4,196</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Usage alerts</div>
+                  <div class="card-sub">Cost, quota and abnormal usage signals</div>
+                </div>
+              </div>
+              <div class="card-body attention">
+                <div class="attention-item">
+                  <div class="attention-left">
+                    <div class="attention-symbol">!</div>
+                    <div class="attention-copy">
+                      <b>ABC College reached 78% of monthly AI budget</b>
+                      <span>Projected to reach 100% before month end.</span>
+                    </div>
+                  </div>
+                  <button class="mini-btn" (click)="state.showToast('Budget alert acknowledged')">Review</button>
+                </div>
+                <div class="attention-item">
+                  <div class="attention-left">
+                    <div class="attention-symbol">!</div>
+                    <div class="attention-copy">
+                      <b>SITRC Computer Engineering usage up 31%</b>
+                      <span>Increase driven primarily by resume/JD chat.</span>
+                    </div>
+                  </div>
+                  <button class="mini-btn" (click)="state.showToast('Inspection panel opened')">Inspect</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 6. MIGRATIONS PAGE                         -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'migrations') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">Database lifecycle</div>
+              <h1>Migrations</h1>
+              <div class="subtitle">Coordinate schema updates across the database-per-college tenant fleet.</div>
+            </div>
+            <button class="btn primary" (click)="state.showToast('Migration orchestrator queued v28 rollout')">Run migration</button>
+          </div>
+
+          <div class="four-col" style="margin-bottom:16px">
+            <div class="stat-card"><div class="label">Target schema</div><div class="value">v28</div><div class="hint">Latest production release</div></div>
+            <div class="stat-card"><div class="label">Up to date</div><div class="value">31</div><div class="hint">Tenants on v28</div></div>
+            <div class="stat-card"><div class="label">Pending</div><div class="value">8</div><div class="hint">Scheduled or awaiting window</div></div>
+            <div class="stat-card"><div class="label">Failed</div><div class="value">3</div><div class="hint">Require operator attention</div></div>
+          </div>
+
+          <section class="card table-card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">Tenant migration status</div>
+                <div class="card-sub">Current and target schema versions per isolated database</div>
+              </div>
+              <button class="filter-chip">Status ▾</button>
+            </div>
+            <div style="overflow:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Institution</th>
+                    <th>Current</th>
+                    <th>Target</th>
+                    <th>Status</th>
+                    <th>Last attempt</th>
+                    <th>Duration</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of state.migrations(); track m.tenant_id) {
+                    <tr>
+                      <td>{{ m.institution_name }}</td>
+                      <td class="mono">{{ m.current_version }}</td>
+                      <td class="mono">{{ m.target_version }}</td>
+                      <td>
+                        <span class="badge" [class.green]="m.status === 'Complete'" [class.amber]="m.status === 'Scheduled'" [class.red]="m.status === 'Failed'">
+                          {{ m.status }}
+                        </span>
+                      </td>
+                      <td>{{ m.last_attempt }}</td>
+                      <td>{{ m.duration }}</td>
+                      <td>
+                        <button class="mini-btn" (click)="state.showToast('Migration action triggered for ' + m.institution_name)">
+                          {{ m.status === 'Failed' ? 'Retry' : 'Logs' }}
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 7. SYSTEM STATUS PAGE                      -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'system-status') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">Reliability</div>
+              <h1>System Status</h1>
+              <div class="subtitle">Platform-wide health across APIs, database routing, queues, AI services and integrations.</div>
+            </div>
+            <span class="badge green">● Operational</span>
+          </div>
+
+          <div class="two-col">
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Services</div>
+                  <div class="card-sub">Current platform health</div>
+                </div>
+              </div>
+              <div class="card-body list-clean">
+                <div class="list-row"><div><b>API Gateway</b><span>99.99% · 24h availability</span></div><span class="badge green">Operational</span></div>
+                <div class="list-row"><div><b>Authentication</b><span>Tenant resolution and sessions</span></div><span class="badge green">Operational</span></div>
+                <div class="list-row"><div><b>Tenant Databases</b><span>42 of 42 reachable (isolated instances)</span></div><span class="badge green">Operational</span></div>
+                <div class="list-row"><div><b>TACIE AI Engine</b><span>LLM and embedding requests</span></div><span class="badge green">Operational</span></div>
+                <div class="list-row"><div><b>ERP Sync</b><span>3 institutions reporting delays</span></div><span class="badge amber">Degraded</span></div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Active incidents</div>
+                  <div class="card-sub">Current and recent operational events</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="attention-item">
+                  <div class="attention-left">
+                    <div class="attention-symbol">!</div>
+                    <div class="attention-copy">
+                      <b>ERP sync delays</b>
+                      <span>3 institutions · started 05:42</span>
+                    </div>
+                  </div>
+                  <button class="mini-btn">Open</button>
+                </div>
+                <div style="height:9px"></div>
+                <div class="attention-item">
+                  <div class="attention-left">
+                    <div class="attention-symbol" style="background:var(--greenSoft);color:var(--green)">✓</div>
+                    <div class="activity-copy">
+                      <b>AI latency incident resolved</b>
+                      <span>Resolved yesterday at 22:10</span>
+                    </div>
+                  </div>
+                  <button class="mini-btn">Review</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 8. SUBSCRIPTIONS PAGE                      -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'subscriptions') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">Commercial</div>
+              <h1>Subscriptions</h1>
+              <div class="subtitle">Manage tenant plans, feature packs, limits and recurring commercial status.</div>
+            </div>
+            <button class="btn primary" (click)="state.showToast('Plan builder opened')">+ Create plan</button>
+          </div>
+
+          <div class="three-col" style="margin-bottom:16px">
+            <div class="stat-card"><div class="label">Monthly recurring revenue</div><div class="value">₹24.7L</div><div class="hint">Illustrative platform total</div></div>
+            <div class="stat-card"><div class="label">Enterprise tenants</div><div class="value">18</div><div class="hint">42.8% of institutions</div></div>
+            <div class="stat-card"><div class="label">Renewals due</div><div class="value">5</div><div class="hint">Within next 30 days</div></div>
+          </div>
+
+          <section class="card table-card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">Institution subscriptions</div>
+                <div class="card-sub">Plans and renewal state</div>
+              </div>
+            </div>
+            <div style="overflow:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Institution</th>
+                    <th>Plan</th>
+                    <th>Status</th>
+                    <th>Students</th>
+                    <th>AI limit</th>
+                    <th>Renewal</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (sub of state.subscriptions(); track sub.id) {
+                    <tr>
+                      <td>{{ sub.tenant_name }}</td>
+                      <td>{{ sub.plan_code }}</td>
+                      <td>
+                        <span class="badge" [class.green]="sub.status === 'ACTIVE'" [class.gray]="sub.status === 'SUSPENDED'">
+                          {{ sub.status }}
+                        </span>
+                      </td>
+                      <td>{{ sub.student_limit | number }}</td>
+                      <td>{{ sub.ai_monthly_limit }}</td>
+                      <td>{{ sub.renewal_at }}</td>
+                      <td><button class="mini-btn" (click)="state.showToast('Subscription editor opened for ' + sub.tenant_name)">Manage</button></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 9. PLATFORM ADMINS PAGE                    -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'admins') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">Security</div>
+              <h1>Platform Admins</h1>
+              <div class="subtitle">Manage the small set of users allowed to operate CareerOS at platform level.</div>
+            </div>
+            <button class="btn primary" (click)="state.showToast('Admin invite dialog opened')">+ Invite admin</button>
+          </div>
+
+          <div class="two-col">
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Administrators</div>
+                  <div class="card-sub">Platform-level access</div>
+                </div>
+              </div>
+              <div class="card-body list-clean">
+                @for (admin of state.platformAdmins(); track admin.id) {
+                  <div class="list-row">
+                    <div>
+                      <b>{{ admin.name || admin.global_user?.email || 'Platform Admin' }}</b>
+                      <span>{{ admin.email || admin.global_user?.email }} · {{ admin.access_level }}</span>
+                    </div>
+                    <span class="badge green">Active</span>
+                  </div>
+                }
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Role definitions</div>
+                  <div class="card-sub">Principle of least privilege</div>
+                </div>
+              </div>
+              <div class="card-body list-clean">
+                <div class="list-row"><div><b>Super Admin</b><span>Full platform control</span></div><span class="pill">1 user</span></div>
+                <div class="list-row"><div><b>Support Admin</b><span>Tenant diagnostics + support sessions</span></div><span class="pill">3 users</span></div>
+                <div class="list-row"><div><b>Billing Admin</b><span>Plans, subscriptions and invoices</span></div><span class="pill">2 users</span></div>
+                <div class="list-row"><div><b>Infra Admin</b><span>Databases, migrations and incidents</span></div><span class="pill">2 users</span></div>
+              </div>
+            </section>
+          </div>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 10. AUDIT LOGS PAGE                        -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'audit') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">Governance</div>
+              <h1>Audit Logs</h1>
+              <div class="subtitle">Immutable operational history for tenant, security, infrastructure and commercial actions.</div>
+            </div>
+            <button class="btn" (click)="state.showToast('Audit logs exported to CSV')">Export logs</button>
+          </div>
+
+          <section class="card table-card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">Recent events</div>
+                <div class="card-sub">Platform-level audited activity</div>
+              </div>
+              <div class="table-tools">
+                <button class="filter-chip">Institution ▾</button>
+                <button class="filter-chip">Action ▾</button>
+                <button class="filter-chip">Date ▾</button>
+              </div>
+            </div>
+            <div style="overflow:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Actor</th>
+                    <th>Institution</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Result</th>
+                    <th>Correlation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (log of state.auditLogs(); track log.id) {
+                    <tr>
+                      <td>{{ log.timestamp }}</td>
+                      <td>{{ log.actor }}</td>
+                      <td>{{ log.institution }}</td>
+                      <td>{{ log.action }}</td>
+                      <td>{{ log.entity }}</td>
+                      <td>
+                        <span class="badge" [class.green]="log.result === 'Success'" [class.red]="log.result === 'Failed'">
+                          {{ log.result }}
+                        </span>
+                      </td>
+                      <td class="mono">{{ log.correlation_id }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      }
+
+      <!-- ========================================== -->
+      <!-- 11. SETTINGS PAGE                          -->
+      <!-- ========================================== -->
+      @if (state.activePage() === 'settings') {
+        <section class="page">
+          <div class="page-title-row">
+            <div>
+              <div class="eyebrow">Platform configuration</div>
+              <h1>Settings</h1>
+              <div class="subtitle">Global CareerOS defaults and operational policies. Tenant-specific settings remain inside each institution.</div>
+            </div>
+            <button class="btn primary" (click)="state.saveAllSettings()">Save changes</button>
+          </div>
+
+          <div class="settings-grid">
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Platform defaults</div>
+                  <div class="card-sub">Applied to newly provisioned tenants</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="setting-row">
+                  <div><b>Default AI module</b><span>Enable TACIE for new institutions</span></div>
+                  <div class="toggle" [class.on]="state.platformSettings().defaultAiModule" (click)="state.toggleSetting('defaultAiModule')"></div>
+                </div>
+                <div class="setting-row">
+                  <div><b>Assessment hub</b><span>Enable during onboarding</span></div>
+                  <div class="toggle" [class.on]="state.platformSettings().assessmentHub" (click)="state.toggleSetting('assessmentHub')"></div>
+                </div>
+                <div class="setting-row">
+                  <div><b>Alumni network</b><span>Available to new institutions</span></div>
+                  <div class="toggle" [class.on]="state.platformSettings().alumniNetwork" (click)="state.toggleSetting('alumniNetwork')"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Security defaults</div>
+                  <div class="card-sub">Platform-level policies</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="setting-row">
+                  <div><b>Admin MFA</b><span>Required for platform administrators</span></div>
+                  <div class="toggle" [class.on]="state.platformSettings().adminMfa" (click)="state.toggleSetting('adminMfa')"></div>
+                </div>
+                <div class="setting-row">
+                  <div><b>Support session approval</b><span>Require reason before tenant access</span></div>
+                  <div class="toggle" [class.on]="state.platformSettings().supportApproval" (click)="state.toggleSetting('supportApproval')"></div>
+                </div>
+                <div class="setting-row">
+                  <div><b>Verbose auth errors</b><span>Keep tenant discovery responses generic</span></div>
+                  <div class="toggle" [class.on]="state.platformSettings().verboseAuthErrors" (click)="state.toggleSetting('verboseAuthErrors')"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card danger-card" style="grid-column:1/-1">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">Danger zone</div>
+                  <div class="card-sub">High-impact platform operations</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="setting-row">
+                  <div>
+                    <b>Pause tenant provisioning</b>
+                    <span>Prevent new databases from being created during maintenance.</span>
+                  </div>
+                  <button class="btn" (click)="state.toggleSetting('provisioningPaused')">
+                    {{ state.platformSettings().provisioningPaused ? 'Resume provisioning' : 'Pause provisioning' }}
+                  </button>
+                </div>
+                <div class="setting-row maintenance-setting">
+  <div class="maintenance-setting-copy">
+    <div class="maintenance-setting-title">
+      <b>Maintenance mode</b>
+
+      @if (state.platformSettings().maintenanceMode) {
+        <span class="maintenance-status active">
+          <span class="status-dot"></span>
+          Active
+        </span>
+      } @else {
+        <span class="maintenance-status inactive">
+          <span class="status-dot"></span>
+          Inactive
+        </span>
+      }
+    </div>
+
+    <span>
+      Restrict platform access while critical maintenance runs.
+    </span>
+  </div>
+
+  <button
+    type="button"
+    class="btn"
+    [class.danger-btn]="!state.platformSettings().maintenanceMode"
+    (click)="onMaintenanceButtonClick()"
+  >
+    {{
+      state.platformSettings().maintenanceMode
+        ? 'Disable maintenance'
+        : 'Enable maintenance'
+    }}
+  </button>
+</div>
+              </div>
+            </section>
+          </div>
+        </section>
+      }
+
+    </div>
+  </main>
+</div>
+
+<!-- Maintainance Mode Confirmation Modal -->
+<!-- ========================================== -->
+<!-- MAINTENANCE MODE CONFIRMATION MODAL        -->
+<!-- ========================================== -->
+
+<div
+  class="overlay"
+  [class.show]="isMaintenanceConfirmModalOpen()"
+  (click)="closeMaintenanceConfirmModal()"
+></div>
+
+<div
+  class="modal-container"
+  [class.show]="isMaintenanceConfirmModalOpen()"
+>
+  <div class="modal-card">
+
+    <!-- Header -->
+    <div class="modal-head">
+      <div>
+        <h3>Enable Maintenance Mode?</h3>
+
+        <span
+          style="
+            font-size: 10px;
+            color: var(--muted);
+          "
+        >
+          This is a high-impact platform operation.
+        </span>
+      </div>
+
+      <button
+        class="icon-btn"
+        (click)="closeMaintenanceConfirmModal()"
+      >
+        ×
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+
+      <div
+        style="
+          padding: 14px;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          background: var(--surfaceSoft);
+        "
+      >
+        <div
+          style="
+            font-weight: 700;
+            margin-bottom: 6px;
+          "
+        >
+          Maintenance mode will restrict platform access.
+        </div>
+
+        <div
+          style="
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.6;
+          "
+        >
+          Users may temporarily lose access to CareerOS while maintenance
+          mode is active. Make sure all critical operations have been
+          completed before continuing.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-foot">
+
+      <button
+        class="btn"
+        (click)="closeMaintenanceConfirmModal()"
+      >
+        Cancel
+      </button>
+
+      <button
+        class="btn primary"
+        (click)="confirmEnableMaintenance()"
+      >
+        Enable Maintenance
+      </button>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- ADD INSTITUTION DRAWER (5-STEP ONBOARDING) -->
+<!-- ========================================== -->
+<div class="overlay" [class.show]="state.isAddInstitutionDrawerOpen()" (click)="state.closeAddInstitutionDrawer()"></div>
+
+<aside class="drawer" [class.open]="state.isAddInstitutionDrawerOpen()">
+  <div class="drawer-head">
+    <div>
+      <h2>Add institution</h2>
+      <p>Create and provision a new CareerOS isolated tenant.</p>
+    </div>
+    <button class="icon-btn" (click)="state.closeAddInstitutionDrawer()">×</button>
+  </div>
+
+  <div class="drawer-body">
+    <div class="stepper">
+      <div class="step" [class.active]="state.drawerStep() >= 1"></div>
+      <div class="step" [class.active]="state.drawerStep() >= 2"></div>
+      <div class="step" [class.active]="state.drawerStep() >= 3"></div>
+      <div class="step" [class.active]="state.drawerStep() >= 4"></div>
+      <div class="step" [class.active]="state.drawerStep() >= 5"></div>
+    </div>
+
+    <!-- STEP 1: Institution Details -->
+    @if (state.drawerStep() === 1) {
+      <div class="eyebrow">Step 1 of 5 · Institution Details</div>
+      <div class="form-group">
+        <label>Institution name</label>
+        <input class="form-control" [(ngModel)]="state.newInstitutionForm().name" placeholder="e.g. Sandip Institute of Technology" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Short name / Slug</label>
+          <input class="form-control" [(ngModel)]="state.newInstitutionForm().shortName" placeholder="SITRC" />
+        </div>
+        <div class="form-group">
+          <label>Institution type</label>
+          <select class="form-control" [(ngModel)]="state.newInstitutionForm().institutionType">
+            <option>Engineering College</option>
+            <option>University</option>
+            <option>Autonomous Institute</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Official domain</label>
+        <input class="form-control" [(ngModel)]="state.newInstitutionForm().domain" placeholder="college.edu.in" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>City</label>
+          <input class="form-control" [(ngModel)]="state.newInstitutionForm().city" placeholder="Nashik" />
+        </div>
+        <div class="form-group">
+          <label>State</label>
+          <input class="form-control" [(ngModel)]="state.newInstitutionForm().state" placeholder="Maharashtra" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>University / Affiliation</label>
+        <input class="form-control" [(ngModel)]="state.newInstitutionForm().affiliation" placeholder="Savitribai Phule Pune University" />
+      </div>
+      <div class="info-box">
+        CareerOS will automatically allocate a unique four-digit login code for this institution.
+        <div class="generated-code">{{ state.newInstitutionForm().generatedCode }}</div>
+        Students and staff will use this code together with their credentials to access their tenant database.
+      </div>
+    }
+
+    <!-- STEP 2: Plan & Limits -->
+    @if (state.drawerStep() === 2) {
+      <div class="eyebrow">Step 2 of 5 · Subscription Plan & Limits</div>
+      <div class="form-group">
+        <label>Plan tier</label>
+        <select class="form-control" [(ngModel)]="state.newInstitutionForm().planCode">
+          <option value="Enterprise">Enterprise (Full AI + Dedicated DB)</option>
+          <option value="Standard">Standard (Campus Drive + Core AI)</option>
+          <option value="Starter">Starter (Basic Placement Portal)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Student capacity</label>
+          <input class="form-control" type="number" [(ngModel)]="state.newInstitutionForm().studentLimit" />
+        </div>
+        <div class="form-group">
+          <label>AI monthly quota</label>
+          <input class="form-control" type="number" [(ngModel)]="state.newInstitutionForm().aiLimit" />
+        </div>
+      </div>
+      <div class="info-box">
+        Database isolation: An isolated PostgreSQL 17 schema
+        <b>careeros_{{ state.newInstitutionForm().shortName.toLowerCase() }}</b>
+        will be provisioned with target schema v28.
+      </div>
+    }
+
+    <!-- STEP 3: Primary Admin -->
+    @if (state.drawerStep() === 3) {
+      <div class="eyebrow">Step 3 of 5 · Primary Administrator</div>
+      <div class="form-group">
+        <label>Admin Full Name</label>
+        <input class="form-control" [(ngModel)]="state.newInstitutionForm().adminName" placeholder="Dr. Head TPO" />
+      </div>
+      <div class="form-group">
+        <label>Admin Email (Login Identity)</label>
+        <input class="form-control" [(ngModel)]="state.newInstitutionForm().adminEmail" placeholder="tpo@college.edu.in" />
+      </div>
+      <div class="info-box">
+        An invitation link and access credentials will be securely dispatched to this email upon database creation.
+      </div>
+    }
+
+    <!-- STEP 4: Departments Configuration -->
+    @if (state.drawerStep() === 4) {
+      <div class="eyebrow">Step 4 of 5 · Configure Departments</div>
+      <div class="form-group">
+        <label>Default Departments</label>
+        <div class="list-clean">
+          @for (d of state.newInstitutionForm().departments; track d) {
+            <div class="list-row" style="padding: 6px 0;">
+              <div><b>{{ d }}</b></div>
+              <span class="badge green">Ready</span>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="info-box">
+        Departments define placement policy scopes, eligibility rules, and AI quota distribution.
+      </div>
+    }
+
+    <!-- STEP 5: Review & Provision -->
+    @if (state.drawerStep() === 5) {
+      <div class="eyebrow">Step 5 of 5 · Review & Confirm Provisioning</div>
+      <div class="status-list" style="margin-top: 10px;">
+        <div class="status-row">
+          <span class="dot greenDot"></span>
+          <span>College: <b>{{ state.newInstitutionForm().name }}</b></span>
+          <span class="code">{{ state.newInstitutionForm().generatedCode }}</span>
+        </div>
+        <div class="status-row">
+          <span class="dot greenDot"></span>
+          <span>Database Name:</span>
+          <span class="mono">careeros_{{ state.newInstitutionForm().shortName.toLowerCase() }}</span>
+        </div>
+        <div class="status-row">
+          <span class="dot greenDot"></span>
+          <span>Plan:</span>
+          <span>{{ state.newInstitutionForm().planCode }}</span>
+        </div>
+        <div class="status-row">
+          <span class="dot greenDot"></span>
+          <span>Primary Admin:</span>
+          <span>{{ state.newInstitutionForm().adminEmail }}</span>
+        </div>
+      </div>
+      <div class="info-box" style="margin-top: 16px;">
+        Clicking "Provision Workspace" will register the tenant in the control plane, provision the isolated database, and begin schema migration v28.
+      </div>
+    }
+  </div>
+
+  <div class="drawer-foot">
+    <button class="btn" (click)="state.closeAddInstitutionDrawer()">Cancel</button>
+    @if (state.drawerStep() > 1) {
+      <button class="btn" (click)="state.setDrawerStep(state.drawerStep() - 1)">← Back</button>
+    }
+    @if (state.drawerStep() < 5) {
+      <button class="btn primary" (click)="state.setDrawerStep(state.drawerStep() + 1)">Continue →</button>
+    } @else {
+      <button class="btn primary" (click)="state.submitNewInstitution()">Provision Workspace 🚀</button>
+    }
+  </div>
+</aside>
+
+<!-- ========================================== -->
+<!-- COLLEGE LOGIN & TENANT RESOLUTION MODAL    -->
+<!-- ========================================== -->
+<div class="overlay" [class.show]="state.isCollegeLoginModalOpen()" (click)="state.closeCollegeLoginModal()"></div>
+
+<div class="modal-container" [class.show]="state.isCollegeLoginModalOpen()">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h3>Resolve College Tenant (Database Isolation)</h3>
+        <span style="font-size: 10px; color: var(--muted);">
+          Enter the college 4-digit code or slug to resolve the tenant and connect to its isolated database.
+        </span>
+      </div>
+      <button class="icon-btn" (click)="state.closeCollegeLoginModal()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label>College Code or Identifier</label>
+        <div style="display:flex; gap:8px;">
+          <input
+            class="form-control"
+            style="font-size: 14px; font-weight: 700; letter-spacing: 0.05em;"
+            [(ngModel)]="state.loginCodeInput"
+            placeholder="e.g. 4821, 7314, 2608, 9143"
+            (keyup.enter)="state.resolveCollege(state.loginCodeInput())"
+          />
+          <button class="btn primary" (click)="state.resolveCollege(state.loginCodeInput())" [disabled]="state.isResolvingCollege()">
+            {{ state.isResolvingCollege() ? 'Resolving...' : 'Resolve' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick College Selectors -->
+      <div style="margin-top: 10px;">
+        <span style="font-size: 10px; font-weight: 700; color: var(--muted);">TRY PROTOTYPE COLLEGES:</span>
+        <div class="quick-colleges">
+          <button class="quick-college-chip" (click)="quickSelectCollege('4821')">4821 · SITRC (Enterprise)</button>
+          <button class="quick-college-chip" (click)="quickSelectCollege('7314')">7314 · ABC College (Standard)</button>
+          <button class="quick-college-chip" (click)="quickSelectCollege('2608')">2608 · XYZ Institute (Provisioning)</button>
+          <button class="quick-college-chip" (click)="quickSelectCollege('9143')">9143 · DEF College (Attention)</button>
+          <button class="quick-college-chip" (click)="quickSelectCollege('5530')">5530 · PQR Vidyapeeth (Suspended)</button>
+        </div>
+      </div>
+
+      @if (state.collegeResolutionError()) {
+        <div style="margin-top: 12px; padding: 10px; border-radius: 6px; background: #fff0ef; border: 1px solid #f3d8d5; color: #b42318; font-size: 11px;">
+          ⚠️ {{ state.collegeResolutionError() }}
+        </div>
+      }
+
+      <!-- Resolved College Details & Isolation Badge -->
+      @if (state.resolvedCollegeResult(); as res) {
+        <div class="isolation-card">
+          <div class="isolation-badge-title">
+            <span>🛡️ TENANT VERIFIED · DATABASE ISOLATED</span>
+            <span class="badge green">● {{ res.isolation.status }}</span>
+          </div>
+
+          <div style="margin-top: 6px; font-size: 12px; font-weight: 750; color: #17191d;">
+            {{ res.tenant.name }} (Code: {{ res.tenant.college_code }})
+          </div>
+
+          <div class="isolation-details">
+            <div>
+              <span>Isolated Database:</span>
+              <b>{{ res.isolation.database_name }}</b>
+            </div>
+            <div>
+              <span>Engine / Provider:</span>
+              <b>{{ res.isolation.provider }}</b>
+            </div>
+            <div>
+              <span>Schema Version:</span>
+              <b>{{ res.isolation.schema_version }}</b>
+            </div>
+            <div>
+              <span>Tenant Slug:</span>
+              <b>{{ res.tenant.slug }}</b>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" (click)="state.closeCollegeLoginModal()">Cancel</button>
+      <button
+        class="btn primary"
+        [disabled]="!state.resolvedCollegeResult()"
+        (click)="state.applyResolvedCollegeTenant()"
+      >
+        Switch to this College Tenant (Attach x-tenant-id)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- TOAST POPUP                                -->
+<!-- ========================================== -->
+@if (state.toastMessage()) {
+  <div class="toast-bar">
+    <span>✓</span>
+    <span>{{ state.toastMessage() }}</span>
+  </div>
+}
+

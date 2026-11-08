@@ -1,0 +1,15 @@
+[project]
+name = "ai-framework"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "boto3>=1.43.111",
+    "fastapi>=0.143.0",
+    "psycopg>=3.3.6",
+    "psycopg2>=2.9.13",
+    "psycopg2-binary>=2.9.13",
+    "sqlmodel>=0.0.48",
+    "uvicorn[standard]>=0.35.0",
+]

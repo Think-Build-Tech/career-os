@@ -30,6 +30,8 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          retry-max-attempts: 1
+          role-session-name: careeros-${{ github.run_id }}
 
       - uses: hashicorp/setup-terraform@v3
         with:

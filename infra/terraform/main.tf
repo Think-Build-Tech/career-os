@@ -225,6 +225,20 @@ resource "aws_service_discovery_private_dns_namespace" "main" {
   vpc  = aws_vpc.main.id
 }
 
+resource "aws_service_discovery_service" "api" {
+  name = "api"
+
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.main.id
+    dns_records {
+      ttl  = 10
+      type = "A"
+    }
+  }
+
+  health_check_custom_config { failure_threshold = 1 }
+}
+
 resource "aws_service_discovery_service" "ai" {
   name = "ai-framework"
 
@@ -482,7 +496,7 @@ resource "aws_ecs_service" "web" {
   task_definition = aws_ecs_task_definition.web.arn
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
-  depends_on      = [aws_lb_listener.http]
+  depends_on      = [aws_lb_listener.http, aws_ecs_service.api]
   network_configuration {
     subnets          = aws_subnet.private[*].id
     security_groups  = [aws_security_group.ecs.id]
@@ -509,6 +523,9 @@ resource "aws_ecs_service" "api" {
     target_group_arn = aws_lb_target_group.api.arn
     container_name   = "api"
     container_port   = 5000
+  }
+  service_registries {
+    registry_arn = aws_service_discovery_service.api.arn
   }
 }
 

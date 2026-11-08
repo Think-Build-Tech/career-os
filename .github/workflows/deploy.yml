@@ -94,7 +94,71 @@ jobs:
         run: |
           CLUSTER=$(terraform output -raw ecs_cluster)
           PREFIX="${PROJECT_NAME}-${ENVIRONMENT}"
-          aws ecs wait services-stable --cluster "$CLUSTER" --services "$PREFIX-api" "$PREFIX-web" "$PREFIX-ai"
+          SERVICES=("$PREFIX-api" "$PREFIX-web" "$PREFIX-ai")
+
+          # The AWS CLI waiter gives up after a relatively short fixed window.
+          # ECS tasks can take longer on a first deployment while images pull,
+          # ENIs attach, and the load balancer performs health checks.
+          for attempt in $(seq 1 120); do
+            stable=true
+            for service in "${SERVICES[@]}"; do
+              read -r status desired running pending rollout < <(
+                aws ecs describe-services \
+                  --cluster "$CLUSTER" \
+                  --services "$service" \
+                  --query 'services[0].[status,desiredCount,runningCount,pendingCount,deployments[?status==`PRIMARY`].rolloutState | [0]]' \
+                  --output text
+              )
+
+              echo "$service status=$status desired=$desired running=$running pending=$pending rollout=$rollout"
+              if [[ "$status" != "ACTIVE" || "$desired" != "$running" || "$pending" != "0" || "$rollout" == "FAILED" || "$rollout" == "IN_PROGRESS" ]]; then
+                stable=false
+              fi
+            done
+
+            if [[ "$stable" == "true" ]]; then
+              echo "All ECS services are stable."
+              exit 0
+            fi
+            sleep 15
+          done
+
+          echo "ECS services did not stabilize within 30 minutes."
+          exit 1
+
+      - name: Diagnose ECS service failure
+        if: ${{ failure() }}
+        working-directory: infra/terraform
+        shell: bash
+        run: |
+          CLUSTER=$(terraform output -raw ecs_cluster)
+          PREFIX="${PROJECT_NAME}-${ENVIRONMENT}"
+          for service in "$PREFIX-api" "$PREFIX-web" "$PREFIX-ai"; do
+            echo "===== ECS service: $service ====="
+            aws ecs describe-services \
+              --cluster "$CLUSTER" \
+              --services "$service" \
+              --query 'services[0].{status:status,desired:desiredCount,running:runningCount,pending:pendingCount,deployments:deployments,events:events[0:10]}' \
+              --output json || true
+
+            running_tasks=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$service" --desired-status RUNNING --query 'taskArns[]' --output text || true)
+            if [[ -n "$running_tasks" && "$running_tasks" != "None" ]]; then
+              aws ecs describe-tasks \
+                --cluster "$CLUSTER" \
+                --tasks $running_tasks \
+                --query 'tasks[].{taskArn:taskArn,lastStatus:lastStatus,healthStatus:healthStatus,stoppedReason:stoppedReason,containers:containers[].{name:name,lastStatus:lastStatus,exitCode:exitCode,reason:reason}}' \
+                --output json || true
+            fi
+
+            stopped_tasks=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$service" --desired-status STOPPED --query 'taskArns[0:10]' --output text || true)
+            if [[ -n "$stopped_tasks" && "$stopped_tasks" != "None" ]]; then
+              aws ecs describe-tasks \
+                --cluster "$CLUSTER" \
+                --tasks $stopped_tasks \
+                --query 'tasks[].{taskArn:taskArn,stoppedReason:stoppedReason,containers:containers[].{name:name,exitCode:exitCode,reason:reason}}' \
+                --output json || true
+            fi
+          done
 
       - name: Smoke test public API
         working-directory: infra/terraform

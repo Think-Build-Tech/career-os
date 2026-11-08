@@ -63,7 +63,7 @@ The first apply intentionally keeps ECS at zero tasks because the ECR repositori
 
 ## GitHub repository configuration
 
-Add these repository/environment values to a protected `development` environment:
+Add these repository/environment values to a protected `Dev` environment:
 
 Secrets:
 

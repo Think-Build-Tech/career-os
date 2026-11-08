@@ -85,5 +85,5 @@ After that, every push to `dev` runs `.github/workflows/deploy.yml`. Pull reques
 
 - Replace the placeholder Bedrock model/key before enabling TACIE generation.
 - The RDS password and AI credentials are injected from Secrets Manager; they are not placed in container images.
-- The default Terraform NAT gateway and RDS settings are suitable for a first deployment, but they incur AWS charges. Enable `db_multi_az` and `enable_deletion_protection` for a production workload after validating the environment.
+- The development default disables RDS automated backups (`db_backup_retention_period = 0`) because some AWS Free Tier accounts reject non-zero retention. Set `db_backup_retention_period = 7`, enable `db_multi_az`, and enable `enable_deletion_protection` for a production workload after validating the environment.
 - The current ALB listener is HTTP on port 80. Add an ACM certificate and HTTPS listener before exposing real student data publicly.

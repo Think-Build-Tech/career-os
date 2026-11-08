@@ -74,6 +74,11 @@ variable "db_multi_az" {
   default = false
 }
 
+variable "db_backup_retention_period" {
+  type    = number
+  default = 0
+}
+
 variable "enable_deletion_protection" {
   type    = bool
   default = false

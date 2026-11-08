@@ -30,10 +30,10 @@ Create a GitHub OIDC provider in IAM with:
 - Provider URL: `https://token.actions.githubusercontent.com`
 - Audience: `sts.amazonaws.com`
 
-Create an IAM role trusted only for this repository’s `dev` branch. Its trust condition should include:
+Create an IAM role trusted only for this repository’s `Dev` environment. Configure the GitHub environment to allow deployments from the `dev` branch. Its trust condition should include:
 
 ```json
-"token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPO:ref:refs/heads/dev"
+"token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPO:environment:Dev"
 ```
 
 Templates are provided in `infra/aws/github-actions-trust-policy.json` and `infra/aws/github-actions-deploy-policy.json`. Replace the placeholders before applying them. The deployment policy is intentionally broad for the initial Terraform bootstrap; narrow its resource permissions once the stack is established.

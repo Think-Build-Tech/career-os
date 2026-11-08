@@ -12,7 +12,10 @@
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:Think-Build-Tech@293962508/career-os@1398880672:environment:Dev"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:Think-Build-Tech@293962508/career-os@1398880672:environment:Dev",
+            "repo:Think-Build-Tech/career-os:environment:Dev"
+          ]
         }
       }
     }

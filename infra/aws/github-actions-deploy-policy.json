@@ -22,6 +22,7 @@
         "iam:ListAttachedRolePolicies",
         "iam:ListRolePolicies",
         "iam:GetRolePolicy",
+        "iam:ListInstanceProfilesForRole",
         "iam:TagRole",
         "iam:CreateServiceLinkedRole",
         "iam:UpdateAssumeRolePolicy",

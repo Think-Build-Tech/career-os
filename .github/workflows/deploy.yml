@@ -68,7 +68,7 @@ jobs:
       - name: Build and push immutable images
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
-          TAG: ${{ github.sha }}
+          TAG: ${{ github.sha }}-${{ github.run_attempt }}
         shell: bash
         run: |
           PREFIX="${PROJECT_NAME}-${ENVIRONMENT}"
@@ -86,7 +86,7 @@ jobs:
           TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
           TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}
           TF_VAR_bedrock_model: ${{ vars.TF_VAR_BEDROCK_MODEL }}
-        run: terraform apply -auto-approve -input=false -var="environment=${ENVIRONMENT}" -var="image_tag=${{ github.sha }}" -var="desired_count=1"
+        run: terraform apply -auto-approve -input=false -var="environment=${ENVIRONMENT}" -var="image_tag=${{ github.sha }}-${{ github.run_attempt }}" -var="desired_count=1"
 
       - name: Wait for ECS services
         working-directory: infra/terraform

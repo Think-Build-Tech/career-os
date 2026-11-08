@@ -1,0 +1,13 @@
+aws_region        = "ap-south-1"
+project_name      = "careeros"
+environment       = "production"
+db_name           = "careeros"
+db_username       = "careeros"
+db_password       = "replace-with-a-long-random-password"
+ai_service_api_key = "replace-with-a-long-random-token"
+bedrock_api_key   = "replace-with-your-bedrock-key"
+bedrock_region    = "us-east-1"
+bedrock_model     = "your-bedrock-model-id"
+
+# Keep this at 0 for the first bootstrap apply if the ECR repositories do not exist yet.
+desired_count     = 0

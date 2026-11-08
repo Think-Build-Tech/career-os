@@ -56,7 +56,8 @@ export class PortalStateService {
     const academic = this.latestAcademicRecord();
     const inst = this.currentInstitution();
 
-    const fullName = user?.name ?? student?.user?.name ?? 'Student';
+    const userName = user?.name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null);
+    const fullName = userName ?? student?.user?.name ?? 'Student';
     const initials = fullName
       .split(' ')
       .filter(Boolean)

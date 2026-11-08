@@ -29,15 +29,15 @@ const SESSION_STORAGE_KEY = 'careeros_active_session';
 
 const DEFAULT_SESSION: AuthenticatedSession = {
   tenantId: '00000000-0000-0000-0000-000000000001',
-  userId: '00000000-0000-0000-0000-000000000101',
-  studentId: '00000000-0000-0000-0000-000000000201',
+  userId: 'fa100000-0000-0000-0000-000000000002',
+  studentId: 'fa200000-0000-0000-0000-000000000002',
   collegeCode: '4821',
   institutionName: 'SITRC (Sandip Institute of Technology)',
   institutionSlug: 'sitrc',
   databaseName: 'careeros_sitrc',
   schemaVersion: 'v28',
   databaseProvider: 'PostgreSQL 17',
-  roleCode: 'SUPER_ADMIN',
+  roleCode: 'STUDENT',
 };
 
 @Injectable({

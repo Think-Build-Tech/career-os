@@ -36,6 +36,15 @@ export default defineConfig({
       },
     },
     {
+      name: 'ui',
+      testMatch: /ui-interactions\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:4200',
+        viewport: { width: 1280, height: 800 },
+      },
+    },
+    {
       name: 'mobile',
       testMatch: /mobile\.spec\.ts/,
       use: {

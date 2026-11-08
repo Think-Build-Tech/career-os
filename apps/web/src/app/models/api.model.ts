@@ -23,7 +23,10 @@ export interface SidebarNavItem {
 export interface UserDto {
   id: string;
   email: string;
-  name: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 }
 

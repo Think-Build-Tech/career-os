@@ -6,7 +6,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.14.0 --activate
 
 # Copy root workspace configurations
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
@@ -30,18 +30,17 @@ ENV NODE_ENV=production
 ENV PORT=5000
 ENV HOST=0.0.0.0
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json ./apps/api/package.json
-
-# Install production dependencies
-RUN pnpm install --prod --ignore-scripts
-
 # Copy built artifacts from builder
 COPY --from=builder /app/dist/apps/api ./dist/apps/api
 COPY --from=builder /app/apps/api/src/app/config/schema.sql ./dist/apps/api/schema.sql
 COPY --from=builder /app/apps/api/src/app/config/schema.sql /app/schema.sql
+
+# Nx generates a pruned package manifest for the bundled API. Install only the
+# runtime dependencies beside the built entrypoint; the source workspace is
+# not needed in the runner image.
+RUN corepack enable && corepack prepare pnpm@11.14.0 --activate \
+    && cd /app/dist/apps/api \
+    && pnpm install --prod --ignore-scripts --no-frozen-lockfile
 
 EXPOSE 5000
 

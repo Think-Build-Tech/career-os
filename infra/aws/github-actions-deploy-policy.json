@@ -1,0 +1,40 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "TerraformDeployment",
+      "Effect": "Allow",
+      "Action": [
+        "acm:*",
+        "cloudwatch:PutMetricData",
+        "ec2:*",
+        "ecr:*",
+        "ecs:*",
+        "elasticloadbalancing:*",
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:GetRole",
+        "iam:PassRole",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "logs:*",
+        "rds:*",
+        "secretsmanager:*",
+        "servicediscovery:*",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:ListBucket",
+        "s3:GetBucketVersioning",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:UpdateItem"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

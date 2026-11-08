@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Enable pnpm
+        shell: bash
+        run: corepack enable && corepack prepare pnpm@11.14.0 --activate
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck API, web, and mobile
+        env:
+          NX_DAEMON: "false"
+        run: |
+          pnpm exec tsc -p apps/api/tsconfig.app.json --noEmit
+          pnpm exec tsc -p apps/web/tsconfig.app.json --noEmit
+          pnpm exec tsc -p apps/mobile/tsconfig.json --noEmit
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Compile AI framework
+        run: python -m compileall -q apps/ai-framework/app
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build deployment images
+        run: |
+          docker build -f apps/api/Dockerfile -t careeros-api:ci .
+          docker build -f apps/web/Dockerfile -t careeros-web:ci .
+          docker build -f apps/ai-framework/Dockerfile -t careeros-ai:ci apps/ai-framework

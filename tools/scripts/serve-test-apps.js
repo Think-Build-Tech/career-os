@@ -36,6 +36,29 @@ function createSpaServer(staticDir, port, name) {
       return;
     }
 
+    // Proxy /api requests to live backend server
+    if (req.url.startsWith('/api')) {
+      const proxyReq = http.request(
+        {
+          hostname: '127.0.0.1',
+          port: 5000,
+          path: req.url,
+          method: req.method,
+          headers: { ...req.headers, host: '127.0.0.1:5000' },
+        },
+        (proxyRes) => {
+          res.writeHead(proxyRes.statusCode, proxyRes.headers);
+          proxyRes.pipe(res);
+        }
+      );
+      proxyReq.on('error', (err) => {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Proxy error', message: err.message }));
+      });
+      req.pipe(proxyReq);
+      return;
+    }
+
     const urlPath = req.url.split('?')[0];
     let filePath = path.join(resolvedDir, urlPath);
 

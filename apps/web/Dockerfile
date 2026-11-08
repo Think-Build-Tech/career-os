@@ -6,7 +6,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.14.0 --activate
 
 # Copy root workspace configurations
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./

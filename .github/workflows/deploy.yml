@@ -1,0 +1,106 @@
+name: Deploy CareerOS to AWS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: careeros-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+  PROJECT_NAME: careeros
+  ENVIRONMENT: production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Initialize Terraform backend
+        working-directory: infra/terraform
+        run: >-
+          terraform init -input=false
+          -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+          -backend-config="key=careeros/${{ env.ENVIRONMENT }}/terraform.tfstate"
+          -backend-config="region=${{ env.AWS_REGION }}"
+          -backend-config="dynamodb_table=${{ vars.TF_STATE_LOCK_TABLE }}"
+          -backend-config="encrypt=true"
+
+      - name: Bootstrap infrastructure and ECR repositories
+        working-directory: infra/terraform
+        env:
+          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+          TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
+          TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}
+          TF_VAR_bedrock_model: ${{ vars.TF_VAR_BEDROCK_MODEL }}
+        shell: bash
+        run: |
+          PREFIX="${PROJECT_NAME}-${ENVIRONMENT}"
+          if ! aws ecr describe-repositories --repository-names "$PREFIX/api" "$PREFIX/web" "$PREFIX/ai-framework" >/dev/null 2>&1; then
+            terraform apply -auto-approve -input=false -var="desired_count=0" -var="image_tag=bootstrap"
+          fi
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push immutable images
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ github.sha }}
+        shell: bash
+        run: |
+          PREFIX="${PROJECT_NAME}-${ENVIRONMENT}"
+          docker build -f apps/api/Dockerfile -t "$REGISTRY/$PREFIX/api:$TAG" .
+          docker build -f apps/web/Dockerfile -t "$REGISTRY/$PREFIX/web:$TAG" .
+          docker build -f apps/ai-framework/Dockerfile -t "$REGISTRY/$PREFIX/ai-framework:$TAG" apps/ai-framework
+          docker push "$REGISTRY/$PREFIX/api:$TAG"
+          docker push "$REGISTRY/$PREFIX/web:$TAG"
+          docker push "$REGISTRY/$PREFIX/ai-framework:$TAG"
+
+      - name: Deploy ECS services
+        working-directory: infra/terraform
+        env:
+          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+          TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
+          TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}
+          TF_VAR_bedrock_model: ${{ vars.TF_VAR_BEDROCK_MODEL }}
+        run: terraform apply -auto-approve -input=false -var="image_tag=${{ github.sha }}" -var="desired_count=1"
+
+      - name: Wait for ECS services
+        working-directory: infra/terraform
+        shell: bash
+        run: |
+          CLUSTER=$(terraform output -raw ecs_cluster)
+          PREFIX="${PROJECT_NAME}-${ENVIRONMENT}"
+          aws ecs wait services-stable --cluster "$CLUSTER" --services "$PREFIX-api" "$PREFIX-web" "$PREFIX-ai"
+
+      - name: Smoke test public API
+        working-directory: infra/terraform
+        shell: bash
+        run: |
+          URL=$(terraform output -raw api_health_url)
+          for attempt in {1..20}; do
+            if curl --fail --silent --show-error "$URL"; then exit 0; fi
+            sleep 15
+          done
+          exit 1

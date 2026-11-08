@@ -94,3 +94,7 @@ And join the Nx community:
 - [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
 - [Our Youtube channel](https://www.youtube.com/@nxdevtools)
 - [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+
+## AWS deployment
+
+The repository includes ECS Fargate/RDS/ECR Terraform infrastructure and GitHub Actions CI/CD workflows. Follow [docs/aws-deployment.md](docs/aws-deployment.md) for the one-time AWS and GitHub OIDC setup.

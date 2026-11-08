@@ -58,7 +58,15 @@ export class ApiService{
     }
 
     getUserById(userId: string): Observable<UserDto>{
-        return this.http.get<ApiResponse<UserDto>>(`${this.baseUrl}/users/${userId}`).pipe(map(row => row.data));
+        return this.http.get<any>(`${this.baseUrl}/users/${userId}`).pipe(
+          map(row => {
+            const u = row.user ?? row.data;
+            if (u && !u.name && (u.first_name || u.last_name)) {
+              u.name = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+            }
+            return u;
+          })
+        );
     }
 
     getStudentById(studentId: string): Observable<StudentProfileDto>{

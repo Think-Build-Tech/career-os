@@ -53,7 +53,7 @@ test.describe('CareerOS Backend API & Live Database E2E Tests (No Mocks)', () =>
   });
 
   test('5. Control Plane: List All Registered Tenants', async ({ request }) => {
-    const res = await request.get('/api/control/tenants?page=1&limit=20');
+    const res = await request.get('/api/control/tenants?page=1&limit=100');
     expect(res.ok()).toBeTruthy();
     const data = await res.json();
     expect(data.success).toBe(true);

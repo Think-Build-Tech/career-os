@@ -31,6 +31,11 @@ import {
 
 // Determine default host based on platform
 const getBaseUrl = (): string => {
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configuredUrl) {
+    const normalized = configuredUrl.replace(/\/$/, '');
+    return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
+  }
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:5000/api';
   }

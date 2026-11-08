@@ -1,6 +1,6 @@
 aws_region        = "ap-south-1"
 project_name      = "careeros"
-environment       = "production"
+environment       = "development"
 db_name           = "careeros"
 db_username       = "careeros"
 db_password       = "replace-with-a-long-random-password"

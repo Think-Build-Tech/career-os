@@ -30,10 +30,10 @@ Create a GitHub OIDC provider in IAM with:
 - Provider URL: `https://token.actions.githubusercontent.com`
 - Audience: `sts.amazonaws.com`
 
-Create an IAM role trusted only for this repository’s `main` branch. Its trust condition should include:
+Create an IAM role trusted only for this repository’s `dev` branch. Its trust condition should include:
 
 ```json
-"token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPO:ref:refs/heads/main"
+"token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPO:ref:refs/heads/dev"
 ```
 
 Templates are provided in `infra/aws/github-actions-trust-policy.json` and `infra/aws/github-actions-deploy-policy.json`. Replace the placeholders before applying them. The deployment policy is intentionally broad for the initial Terraform bootstrap; narrow its resource permissions once the stack is established.
@@ -50,7 +50,7 @@ Copy the example variables and set real values. Do not commit the resulting `ter
 Copy-Item infra/terraform/terraform.tfvars.example infra/terraform/terraform.tfvars
 terraform -chdir=infra/terraform init `
   -backend-config="bucket=YOUR_STATE_BUCKET" `
-  -backend-config="key=careeros/production/terraform.tfstate" `
+  -backend-config="key=careeros/development/terraform.tfstate" `
   -backend-config="region=ap-south-1" `
   -backend-config="dynamodb_table=YOUR_LOCK_TABLE" `
   -backend-config="encrypt=true"
@@ -63,7 +63,7 @@ The first apply intentionally keeps ECS at zero tasks because the ECR repositori
 
 ## GitHub repository configuration
 
-Add these repository/environment values to a protected `production` environment:
+Add these repository/environment values to a protected `development` environment:
 
 Secrets:
 
@@ -79,7 +79,7 @@ Variables:
 - `TF_STATE_LOCK_TABLE`
 - `TF_VAR_BEDROCK_MODEL`
 
-After that, every push to `main` runs `.github/workflows/deploy.yml`. Pull requests and pushes also run `.github/workflows/ci.yml`.
+After that, every push to `dev` runs `.github/workflows/deploy.yml`. Pull requests and pushes also run `.github/workflows/ci.yml`.
 
 ## Operational notes
 

@@ -3,25 +3,25 @@ name: Deploy CareerOS to AWS
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [dev]
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: careeros-production
+  group: careeros-development
   cancel-in-progress: false
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
   PROJECT_NAME: careeros
-  ENVIRONMENT: production
+  ENVIRONMENT: development
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production
+    environment: development
     steps:
       - uses: actions/checkout@v4
 
@@ -56,7 +56,7 @@ jobs:
         run: |
           PREFIX="${PROJECT_NAME}-${ENVIRONMENT}"
           if ! aws ecr describe-repositories --repository-names "$PREFIX/api" "$PREFIX/web" "$PREFIX/ai-framework" >/dev/null 2>&1; then
-            terraform apply -auto-approve -input=false -var="desired_count=0" -var="image_tag=bootstrap"
+            terraform apply -auto-approve -input=false -var="environment=${ENVIRONMENT}" -var="desired_count=0" -var="image_tag=bootstrap"
           fi
 
       - name: Log in to Amazon ECR
@@ -84,7 +84,7 @@ jobs:
           TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
           TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}
           TF_VAR_bedrock_model: ${{ vars.TF_VAR_BEDROCK_MODEL }}
-        run: terraform apply -auto-approve -input=false -var="image_tag=${{ github.sha }}" -var="desired_count=1"
+        run: terraform apply -auto-approve -input=false -var="environment=${ENVIRONMENT}" -var="image_tag=${{ github.sha }}" -var="desired_count=1"
 
       - name: Wait for ECS services
         working-directory: infra/terraform

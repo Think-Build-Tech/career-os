@@ -25,12 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Temporary diagnostics for AWS OIDC trust matching. Remove after the
-      # deployment role successfully authenticates.
-      - name: Debug GitHub OIDC claims
-        uses: github/actions-oidc-debugger@main
-        continue-on-error: true
-
       - name: Configure AWS credentials with GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:

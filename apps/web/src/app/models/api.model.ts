@@ -33,6 +33,9 @@ export interface UserDto {
 export interface StudentProfileDto {
   id: string;
   user_id: string;
+  department_id?: string;
+  program_id?: string;
+  cohort_id?: string;
   enrollment_number: string;
   batch_year: number;
   degree: string;
@@ -144,6 +147,7 @@ export interface CompanyDto {
 export interface JobOpportunityDto {
   id: string;
   company_id: string;
+  company?: CompanyDto;
   company_name?: string;
   job_code?: string;
   tier_label?: string;

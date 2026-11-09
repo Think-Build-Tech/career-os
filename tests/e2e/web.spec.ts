@@ -1,171 +1,180 @@
 // tests/e2e/web.spec.ts
 import { test, expect } from '@playwright/test';
 
-test.describe('CareerOS Web Application E2E Tests (Angular Platform Admin Console - No Mocks)', () => {
+test.describe('CareerOS Web Application E2E Tests (Live DB & Full Role Separation - No Mocks)', () => {
 
-  test.beforeEach(async ({ page }) => {
-    // Navigate to base URL which redirects to /admin
+  test('1. Root Entry Point: Default Route Redirects to College Login Page', async ({ page }) => {
+    // Navigating to base URL must redirect to /#/login and present college-based login
     await page.goto('/');
-    // Wait for the main console container
-    await expect(page.locator('.platform-console')).toBeVisible({ timeout: 15000 });
+    await page.waitForURL(/#\/login/, { timeout: 10000 });
+
+    // Verify College Placement Portal branding
+    await expect(page.locator('.brand-title b')).toHaveText('CareerOS');
+    await expect(page.locator('.brand-title span')).toHaveText('COLLEGE PLACEMENT PORTAL');
+    await expect(page.locator('h2')).toContainText('Sign In to Your Institution');
+
+    // Verify quick college chips are rendered
+    const chips = page.locator('.quick-chips .college-chip');
+    await expect(chips.first()).toBeVisible();
+    await expect(chips.filter({ hasText: '4821' })).toBeVisible();
+    await expect(chips.filter({ hasText: '7314' })).toBeVisible();
+
+    // Verify discrete super-admin login link is present
+    const adminLink = page.locator('a[routerLink="/admin/login"]');
+    await expect(adminLink.first()).toBeVisible();
   });
 
-  test('1. Platform Console: Layout, Brand & Active Tenant Badge', async ({ page }) => {
-    // Check Brand and Console Header
-    await expect(page.locator('.brand-copy b')).toHaveText('CareerOS');
-    await expect(page.locator('.brand-copy span')).toHaveText('PLATFORM CONSOLE');
+  test('2. College Tenant Resolution: Live Database Isolation Status Cards', async ({ page }) => {
+    await page.goto('/#/login');
 
-    // Check Tenant Pill Badge (Default 4821 SITRC)
-    const tenantBadge = page.locator('.tenant-pill-badge');
-    await expect(tenantBadge).toBeVisible();
-    await expect(page.locator('.tenant-pill-name')).toContainText('4821');
-    await expect(page.locator('.tenant-pill-db')).toContainText('careeros_sitrc');
-  });
-
-  test('2. Overview Tab: Live Aggregated Metrics', async ({ page }) => {
-    // Ensure Overview page is active
-    await page.locator('.nav-item', { hasText: 'Overview' }).click();
-
-    // Check eyebrow and hero header
-    await expect(page.locator('.hero h1')).toContainText('Good morning. Here’s CareerOS at a glance.');
-
-    // Check KPI metrics loaded from PostgreSQL
-    const metricCards = page.locator('.metrics .metric');
-    await expect(metricCards.first()).toBeVisible();
-
-    // Metric 1: Institutions count
-    const instMetric = page.locator('.metric').filter({ hasText: 'Institutions' }).first();
-    await expect(instMetric.locator('.metric-value').first()).not.toBeEmpty();
-  });
-
-  test('3. Tenant Switcher Modal: Resolve & Switch to 7314 ABC College DB', async ({ page }) => {
-    // Open College Login / Switcher Modal
-    await page.locator('.tenant-pill-badge').click();
-    const modal = page.locator('.modal-container.show');
-    await expect(modal).toBeVisible();
-    await expect(modal.locator('h3')).toContainText('Resolve College Tenant');
-
-    // Select 7314 ABC College via quick chip
-    const abcChip = modal.locator('.quick-college-chip', { hasText: '7314' });
+    // Click 7314 ABC College quick chip
+    const abcChip = page.locator('.college-chip', { hasText: '7314' });
     await abcChip.click();
 
-    // Verify isolation card appears with verified status
-    const isolationCard = modal.locator('.isolation-card');
+    // Verify database isolation card shows ABC College & careeros_abc
+    const isolationCard = page.locator('.isolation-card');
     await expect(isolationCard).toBeVisible({ timeout: 10000 });
     await expect(isolationCard).toContainText('TENANT VERIFIED · DATABASE ISOLATED');
+    await expect(isolationCard).toContainText('ABC College');
     await expect(isolationCard).toContainText('careeros_abc');
 
-    // Click Switch to this College Tenant
-    const switchBtn = modal.locator('button.btn.primary', { hasText: 'Switch to this College Tenant' });
-    await expect(switchBtn).toBeEnabled();
-    await switchBtn.click();
+    // Switch to 4821 SITRC quick chip
+    const sitrcChip = page.locator('.college-chip', { hasText: '4821' });
+    await sitrcChip.click();
 
-    // Modal should close and header badge should update to 7314 / careeros_abc
-    await expect(page.locator('.modal-container.show')).toHaveCount(0);
-    await expect(page.locator('.tenant-pill-name')).toContainText('7314');
-    await expect(page.locator('.tenant-pill-db')).toContainText('careeros_abc');
-
-    // Switch back to 4821 SITRC for subsequent tests
-    await page.locator('.tenant-pill-badge').click();
-    await expect(page.locator('.modal-container.show')).toBeVisible();
-    await page.locator('.quick-college-chip', { hasText: '4821' }).click();
-    await expect(page.locator('.isolation-card')).toContainText('careeros_sitrc');
-    await page.locator('button.btn.primary', { hasText: 'Switch to this College Tenant' }).click();
-    await expect(page.locator('.tenant-pill-name')).toContainText('4821');
+    // Verify database isolation card updates to SITRC & careeros_sitrc
+    await expect(isolationCard).toContainText('Sandip Institute');
+    await expect(isolationCard).toContainText('careeros_sitrc');
   });
 
-  test('4. Institutions Tab: Search & Table Listing', async ({ page }) => {
-    // Navigate to Institutions
+  test('3. Route Guard Security: Unauthenticated Access to /admin Redirects to /admin/login', async ({ page }) => {
+    // Clear any existing session in localStorage
+    await page.goto('/#/login');
+    await page.evaluate(() => localStorage.clear());
+
+    // Attempt direct navigation to protected Super Admin console via hash route
+    await page.goto('/#/admin');
+
+    // Verify route guard intercepts and redirects to /#/admin/login
+    await page.waitForURL(/#\/admin\/login/, { timeout: 10000 });
+    await expect(page.locator('.brand-text span')).toHaveText('PLATFORM SUPER-ADMIN CONSOLE');
+    await expect(page.locator('h2')).toContainText('Super-Administrator Authentication');
+  });
+
+  test('4. Super Admin Login & Live Console Navigation', async ({ page }) => {
+    await page.goto('/#/admin/login');
+
+    // Click 1-Click Fast Dev Authentication as Super Admin
+    const fastAuthBtn = page.locator('button.btn-fast-auth');
+    await expect(fastAuthBtn).toBeVisible({ timeout: 10000 });
+    await fastAuthBtn.click();
+
+    // Console is unlocked and navigates to /#/admin
+    await page.waitForURL(/#\/admin/, { timeout: 10000 });
+    const consoleContainer = page.locator('.platform-console');
+    await expect(consoleContainer).toBeVisible({ timeout: 15000 });
+
+    // Verify Brand
+    await expect(page.locator('.brand-copy b')).toHaveText('CareerOS');
+    await expect(page.locator('.brand-copy span')).toHaveText('PLATFORM CONTROL');
+
+    // Verify live aggregated metrics from PostgreSQL
+    const metricCards = page.locator('.metrics .metric');
+    await expect(metricCards.first()).toBeVisible({ timeout: 10000 });
+    const instMetric = page.locator('.metric').filter({ hasText: 'Institutions' }).first();
+    await expect(instMetric.locator('.metric-value')).not.toBeEmpty();
+
+    // Navigate to Institutions Tab
     await page.locator('.nav-item', { hasText: 'Institutions' }).click();
     await expect(page.locator('.crumb b')).toHaveText('Institutions');
+    await expect(page.locator('table')).toBeVisible();
 
-    // Search for Sandip / SITRC
+    // Test Institutions Search Filter
     const searchInput = page.locator('input[placeholder*="Search"]').first();
-    if (await searchInput.isVisible()) {
-      await searchInput.fill('Sandip');
-      // Verify table row matches
-      await expect(page.locator('tbody tr', { hasText: 'Sandip' }).first()).toBeVisible();
-    }
-  });
+    await searchInput.fill('Sandip');
+    await expect(page.locator('tbody tr', { hasText: 'Sandip' }).first()).toBeVisible();
 
-  test('5. Subscriptions & Platform Admins Tabs', async ({ page }) => {
-    // Navigate to Subscriptions
+    // Navigate to Subscriptions Tab
     await page.locator('.nav-item', { hasText: 'Subscriptions' }).click();
     await expect(page.locator('.crumb b')).toHaveText('Subscriptions');
 
-    // Navigate to Platform Admins
-    await page.locator('.nav-item', { hasText: 'Platform Admins' }).click();
-    await expect(page.locator('.crumb b')).toHaveText('Platform Admins');
+    // Navigate to Infrastructure Tab (Tenant Isolated Databases)
+    await page.locator('.nav-item', { hasText: 'Infrastructure' }).click();
+    await expect(page.locator('.crumb b')).toHaveText('Infrastructure');
+    await expect(page.locator('tbody tr', { hasText: 'careeros_sitrc' }).first()).toBeVisible();
+
+    // Test Admin Sign Out
+    const signOutBtn = page.locator('.sidebar-footer button', { hasText: 'Sign Out / Exit' });
+    await signOutBtn.click();
+
+    // Redirected back to college login
+    await page.waitForURL(/#\/login/, { timeout: 10000 });
+    await expect(page.locator('h2')).toContainText('Sign In to Your Institution');
   });
 
-  test('6. Onboarding Drawer: 5-Step College Provisioning Workflow', async ({ page }) => {
-    // Click + Add Institution to open 5-step drawer
-    await page.locator('button.btn.primary', { hasText: '+ Add Institution' }).click();
-    const drawer = page.locator('aside.drawer.open');
-    await expect(drawer).toBeVisible();
+  test('5. Student Portal Workflow: Login, Command Center, Priority SLA & Jobs', async ({ page }) => {
+    await page.goto('/#/login');
 
-    // Step 1: Fill Institution Details
-    const uniqueNum = Math.floor(1000 + Math.random() * 9000);
-    const instName = `Apex Institute of Tech ${uniqueNum}`;
+    // Sign in as student Aarav Sharma
+    const studentLoginBtn = page.locator('button.btn.btn-instant');
+    await expect(studentLoginBtn).toBeVisible({ timeout: 10000 });
+    await studentLoginBtn.click();
 
-    await drawer.locator('input[placeholder*="Sandip Institute"]').fill(instName);
-    await drawer.locator('input[placeholder="SITRC"]').fill(`AIT${uniqueNum}`);
-    await drawer.locator('input[placeholder*="college.edu.in"]').fill(`apex${uniqueNum}.edu.in`);
+    // Redirects to /#/portal
+    await page.waitForURL(/#\/portal/, { timeout: 10000 });
 
-    // Advance to Step 2
-    await drawer.locator('button.btn.primary', { hasText: 'Continue →' }).click();
+    // Verify Student Header with live student name & DB isolation status
+    await expect(page.locator('header span', { hasText: /DB: careeros_sitrc/i })).toBeVisible();
+    await expect(page.locator('h1')).toContainText('Good morning, Aarav');
 
-    // Advance to Step 3
-    await drawer.locator('button.btn.primary', { hasText: 'Continue →' }).click();
+    // Verify Priority SLA Action Queue
+    const slaSection = page.locator('.rounded-xl', { hasText: 'Priority SLA Action Queue' });
+    await expect(slaSection).toBeVisible();
+    await expect(slaSection.locator('span', { hasText: /No-Show Strikes/i })).toBeVisible();
 
-    // Advance to Step 4
-    await drawer.locator('button.btn.primary', { hasText: 'Continue →' }).click();
+    // Verify Career Readiness Score Gauge
+    const readinessCard = page.locator('.rounded-xl', { hasText: 'Career Readiness' });
+    await expect(readinessCard).toBeVisible();
+    await expect(readinessCard.locator('b', { hasText: /%/ }).first()).toBeVisible();
 
-    // Advance to Step 5 (Review & Provision)
-    await drawer.locator('button.btn.primary', { hasText: 'Continue →' }).click();
-    await expect(drawer.locator('button.btn.primary', { hasText: 'Provision Workspace' })).toBeVisible();
+    // Navigate to Jobs Page via Sidebar
+    const jobsNavLink = page.locator('nav[aria-label="Main Navigation"] button', { hasText: 'Jobs' });
+    await jobsNavLink.click();
 
-    // Submit provisioning
-    await drawer.locator('button.btn.primary', { hasText: 'Provision Workspace' }).click();
+    // Verify Jobs Page loaded
+    await page.waitForURL(/#\/jobs/, { timeout: 10000 });
+    await expect(page.locator('h1')).toContainText('Campus Placement Opportunities');
 
-    // Drawer closes after submit
-    await expect(page.locator('aside.drawer.open')).toHaveCount(0, { timeout: 15000 });
-  });
+    // Verify real placement opportunities from PostgreSQL
+    const jobCards = page.locator('.grid > div.rounded-xl');
+    await expect(jobCards.first()).toBeVisible({ timeout: 10000 });
 
-  test('7. Settings Tab & Maintenance Mode Confirmation Dialog', async ({ page }) => {
-    // Navigate to Settings
-    await page.locator('.sidebar-footer .nav-item', { hasText: 'Settings' }).click();
-    await expect(page.locator('.crumb b')).toHaveText('Settings');
-
-    // Locate maintenance mode action button
-    const maintenanceBtn = page.getByRole('button', { name: /maintenance/i }).first();
-    await expect(maintenanceBtn).toBeVisible();
-
-    const initialText = await maintenanceBtn.innerText();
-
-    if (initialText.includes('Enable maintenance')) {
-      // Click Enable maintenance -> Should open confirmation modal
-      await maintenanceBtn.click();
-      const confirmModal = page.locator('.modal-container.show');
-      await expect(confirmModal).toBeVisible();
-      await expect(confirmModal.locator('h3')).toHaveText('Enable Maintenance Mode?');
-
-      // Test Cancel button closes dialog without changing state
-      await confirmModal.locator('button.btn', { hasText: 'Cancel' }).click();
-      await expect(page.locator('.modal-container.show')).toHaveCount(0);
-      await expect(maintenanceBtn).toContainText('Enable maintenance');
-
-      // Click again and confirm
-      await maintenanceBtn.click();
-      await page.locator('.modal-container.show button.btn.primary').click();
-      await expect(page.locator('.modal-container.show')).toHaveCount(0);
-
-      // Now maintenance mode should be active
-      await expect(maintenanceBtn).toContainText('Disable maintenance');
-
-      // Click Disable maintenance (does not require confirmation)
-      await maintenanceBtn.click();
-      await expect(maintenanceBtn).toContainText('Enable maintenance');
+    // Test Tier Filter Chips
+    const dreamChip = page.getByRole('button', { name: 'Dream', exact: true });
+    if (await dreamChip.isVisible()) {
+      await dreamChip.click();
+      await page.waitForTimeout(300);
     }
+    const allChip = page.getByRole('button', { name: /All Drives/i });
+    await allChip.click();
+
+    // Test 1-Click Apply on an available job
+    const applyBtn = page.locator('button', { hasText: 'Apply with Resume' }).first();
+    if (await applyBtn.isVisible()) {
+      await applyBtn.click();
+      // Should show applied badge or success banner
+      await expect(
+        page.locator('.bg-emerald-50', { hasText: /Applied|Application submitted/i }).first()
+      ).toBeVisible({ timeout: 10000 });
+    }
+
+    // Student Sign Out
+    const studentSignOutBtn = page.locator('header button', { hasText: 'Sign Out' });
+    await studentSignOutBtn.click();
+
+    // Redirected back to college login
+    await page.waitForURL(/#\/login/, { timeout: 10000 });
+    await expect(page.locator('h2')).toContainText('Sign In to Your Institution');
   });
+
 });

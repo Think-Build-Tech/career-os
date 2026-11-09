@@ -4,69 +4,6 @@ import * as path from 'path';
 import config from './config';
 import { sequelize } from './database';
 
-export const PROTOTYPE_COLLEGES = [
-  {
-    id: '00000000-0000-0000-0000-000000000001',
-    college_code: '4821',
-    name: 'Sandip Institute of Technology & Research Centre (SITRC)',
-    slug: 'sitrc',
-    institution_type: 'ENGINEERING_COLLEGE',
-    status: 'ACTIVE',
-    db_name: 'careeros_sitrc',
-    schema: 'v28',
-    db_status: 'HEALTHY',
-    plan: 'ENTERPRISE',
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000002',
-    college_code: '7314',
-    name: 'ABC College of Engineering',
-    slug: 'abc-coe',
-    institution_type: 'ENGINEERING_COLLEGE',
-    status: 'ACTIVE',
-    db_name: 'careeros_abc',
-    schema: 'v28',
-    db_status: 'HEALTHY',
-    plan: 'STANDARD',
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000003',
-    college_code: '2608',
-    name: 'XYZ Institute of Technology',
-    slug: 'xyz-iot',
-    institution_type: 'ENGINEERING_COLLEGE',
-    status: 'PROVISIONING',
-    db_name: 'careeros_xyz',
-    schema: 'v27',
-    db_status: 'CREATING',
-    plan: 'STANDARD',
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000004',
-    college_code: '9143',
-    name: 'DEF College of Engineering',
-    slug: 'def-college',
-    institution_type: 'ENGINEERING_COLLEGE',
-    status: 'ATTENTION',
-    db_name: 'careeros_def',
-    schema: 'v26',
-    db_status: 'MIGRATION_ISSUE',
-    plan: 'ENTERPRISE',
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000005',
-    college_code: '5530',
-    name: 'PQR Vidyapeeth',
-    slug: 'pqr-vidyapeeth',
-    institution_type: 'UNIVERSITY',
-    status: 'SUSPENDED',
-    db_name: 'careeros_pqr',
-    schema: 'v27',
-    db_status: 'PAUSED',
-    plan: 'STANDARD',
-  },
-];
-
 function getClient(database = config.DB_NAME): Client {
   return new Client({
     user: config.DB_USER,
@@ -130,13 +67,13 @@ export async function provisionTenantDatabase(databaseName: string, tenantData?:
       }
 
       // If tenant metadata provided, insert base institution record
-      if (tenantData?.name && tenantData?.code) {
+      if (tenantData?.name && tenantData?.code && tenantData?.tenantId) {
         try {
           await tenantClient.query(`
             INSERT INTO institutions (id, external_tenant_id, name, code, university_name, timezone, status, settings, created_at, updated_at)
             VALUES (gen_random_uuid(), $1, $2, $3, 'State University', 'Asia/Kolkata', 'ACTIVE', '{}'::jsonb, NOW(), NOW())
             ON CONFLICT DO NOTHING;
-          `, [tenantData.tenantId || '00000000-0000-0000-0000-000000000001', tenantData.name, tenantData.code]);
+          `, [tenantData.tenantId, tenantData.name, tenantData.code]);
         } catch {
           // ignore if institutions table differs
         }
@@ -155,8 +92,8 @@ export async function provisionTenantDatabase(databaseName: string, tenantData?:
 
 /**
  * Main verification and self-healing runner executed on API startup.
- * Checks tables, creates missing control models, seeds prototype tenants,
- * and ensures isolated databases exist.
+ * Checks tables, creates missing control models, and verifies databases for
+ * tenants that were explicitly created through the control plane.
  */
 export async function verifyAndInitializeDatabases(): Promise<void> {
   console.log('[DB Check] Checking database connection and self-healing tables...');
@@ -267,55 +204,8 @@ export async function verifyAndInitializeDatabases(): Promise<void> {
       } catch {}
     }
 
-    // 3. Seed Prototype Colleges
-    for (const c of PROTOTYPE_COLLEGES) {
-      await client.query(`
-        INSERT INTO tenants (id, college_code, name, slug, institution_type, status, activated_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        ON CONFLICT (id) DO UPDATE SET
-          college_code = EXCLUDED.college_code,
-          name = EXCLUDED.name,
-          slug = EXCLUDED.slug,
-          status = EXCLUDED.status;
-      `, [c.id, c.college_code, c.name, c.slug, c.institution_type, c.status]);
-
-      await client.query(`
-        INSERT INTO tenant_databases (tenant_id, provider, database_name, host_reference, secret_reference, region, schema_version, status, updated_at)
-        VALUES ($1, 'PostgreSQL 17', $2, 'localhost:5432', 'vault://db/tenants/' || $3, 'ap-south-1 (Mumbai)', $4, $5, NOW())
-        ON CONFLICT (tenant_id) DO UPDATE SET
-          database_name = EXCLUDED.database_name,
-          status = EXCLUDED.status;
-      `, [c.id, c.db_name, c.slug, c.schema, c.db_status]);
-
-      await client.query(`
-        INSERT INTO subscriptions (tenant_id, plan_code, status, starts_at, updated_at)
-        VALUES ($1, $2, 'ACTIVE', NOW(), NOW())
-        ON CONFLICT DO NOTHING;
-      `, [c.id, c.plan]);
-    }
-
-    // 4. Seed Platform Admins
-    const admins = [
-      { email: 'atharva@thinkbuild.ai', access: 'SUPER_ADMIN' },
-      { email: 'support@thinkbuild.ai', access: 'SUPPORT_ADMIN' },
-    ];
-    for (const a of admins) {
-      const uRes = await client.query(`
-        INSERT INTO global_users (id, email, password_hash, status, created_at, updated_at)
-        VALUES (gen_random_uuid(), $1, 'scrypt_hashed_secret', 'ACTIVE', NOW(), NOW())
-        ON CONFLICT (email) DO UPDATE SET status = 'ACTIVE'
-        RETURNING id;
-      `, [a.email]);
-      const userId = uRes.rows[0].id;
-
-      await client.query(`
-        INSERT INTO platform_admins (id, global_user_id, access_level, status, created_at, updated_at)
-        VALUES (gen_random_uuid(), $1, $2, 'ACTIVE', NOW(), NOW())
-        ON CONFLICT (global_user_id) DO UPDATE SET access_level = EXCLUDED.access_level;
-      `, [userId, a.access]);
-    }
-
-    // 5. Seed Default Settings
+    // 3. Insert platform configuration defaults only; no tenants, users, or
+    // administrators are generated at startup.
     await client.query(`
       INSERT INTO platform_settings (key, value, updated_at)
       VALUES ('default', '{
@@ -331,7 +221,7 @@ export async function verifyAndInitializeDatabases(): Promise<void> {
       ON CONFLICT (key) DO NOTHING;
     `);
 
-    // 6. Check physical isolated databases for all registered tenants
+    // 4. Check physical isolated databases for all registered tenants
     console.log('[DB Check] Checking physical databases for registered tenants...');
     const tenantRows = (await client.query(`
       SELECT t.id, t.name, t.college_code, t.slug, td.database_name 

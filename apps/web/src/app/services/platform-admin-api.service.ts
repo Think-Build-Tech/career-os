@@ -1,7 +1,7 @@
 // apps/web/src/app/services/platform-admin-api.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map, catchError, of } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   AdminApiResponse,
@@ -35,180 +35,41 @@ export class PlatformAdminApiService {
       .pipe(
         map((res: any) => ({
           tenant: res.tenant,
-          isolation: res.isolation || {
-            is_isolated_database: true,
-            database_name: `careeros_${res.tenant?.slug || trimmed}`,
-            provider: 'PostgreSQL 17',
-            schema_version: 'v28',
-            status: 'ACTIVE',
-          },
-          message: res.message || 'Tenant resolved successfully',
-        })),
-        catchError((err) => {
-          // Robust client-side fallback matching prototype codes
-          const prototypes: Record<string, any> = {
-            '4821': {
-              id: '00000000-0000-0000-0000-000000000001',
-              college_code: '4821',
-              name: 'SITRC (Sandip Institute of Technology & Research Centre)',
-              slug: 'sitrc',
-              institution_type: 'ENGINEERING_COLLEGE',
-              status: 'ACTIVE',
-              database: {
-                provider: 'PostgreSQL 17',
-                database_name: 'careeros_sitrc',
-                schema_version: 'v28',
-                status: 'HEALTHY',
-              },
-            },
-            '7314': {
-              id: '00000000-0000-0000-0000-000000000002',
-              college_code: '7314',
-              name: 'ABC College of Engineering',
-              slug: 'abc-coe',
-              institution_type: 'ENGINEERING_COLLEGE',
-              status: 'ACTIVE',
-              database: {
-                provider: 'PostgreSQL 17',
-                database_name: 'careeros_abc',
-                schema_version: 'v28',
-                status: 'HEALTHY',
-              },
-            },
-            '2608': {
-              id: '00000000-0000-0000-0000-000000000003',
-              college_code: '2608',
-              name: 'XYZ Institute of Technology',
-              slug: 'xyz-iot',
-              institution_type: 'ENGINEERING_COLLEGE',
-              status: 'PROVISIONING',
-              database: {
-                provider: 'PostgreSQL 17',
-                database_name: 'careeros_xyz',
-                schema_version: 'v27',
-                status: 'CREATING',
-              },
-            },
-            '9143': {
-              id: '00000000-0000-0000-0000-000000000004',
-              college_code: '9143',
-              name: 'DEF College of Engineering',
-              slug: 'def-college',
-              institution_type: 'ENGINEERING_COLLEGE',
-              status: 'ATTENTION',
-              database: {
-                provider: 'PostgreSQL 17',
-                database_name: 'careeros_def',
-                schema_version: 'v26',
-                status: 'MIGRATION_ISSUE',
-              },
-            },
-            '5530': {
-              id: '00000000-0000-0000-0000-000000000005',
-              college_code: '5530',
-              name: 'PQR Vidyapeeth',
-              slug: 'pqr-vidyapeeth',
-              institution_type: 'UNIVERSITY',
-              status: 'SUSPENDED',
-              database: {
-                provider: 'PostgreSQL 17',
-                database_name: 'careeros_pqr',
-                schema_version: 'v27',
-                status: 'PAUSED',
-              },
-            },
-          };
-
-          const matched = prototypes[trimmed] || Object.values(prototypes).find((p) => p.slug === trimmed.toLowerCase());
-          if (matched) {
-            return of({
-              tenant: matched,
-              isolation: {
-                is_isolated_database: true,
-                database_name: matched.database.database_name,
-                provider: matched.database.provider,
-                schema_version: matched.database.schema_version,
-                status: matched.database.status,
-              },
-              message: `Resolved tenant: ${matched.name} (${matched.college_code})`,
-            });
-          }
-          throw err;
-        })
+          isolation: res.isolation,
+          message: res.message,
+        }))
       );
   }
 
   getResolvableColleges(): Observable<TenantDto[]> {
     return this.http.get<any>(`${this.baseUrl}/control/colleges`).pipe(
-      map((res) => (res.colleges ? res.colleges : [])),
-      catchError(() => of([]))
+      map((res) => (Array.isArray(res.colleges) ? res.colleges : []))
     );
   }
 
   // ─── Dashboard & System Metrics ──────────────────────────────────────
   getDashboard(): Observable<AdminDashboardDto> {
     return this.http.get<any>(`${this.baseUrl}/admin/dashboard`).pipe(
-      map((res) => (res.dashboard ? res.dashboard : res.data || res)),
-      catchError(() =>
-        of({
-          generatedAt: new Date().toISOString(),
-          database: { healthy: true },
-          metrics: {
-            totalInstitutions: 42,
-            activeInstitutions: 38,
-            newInstitutions: 3,
-            totalUsers: 26800,
-            aiRequests: 72400,
-            inputTokens: 164000000,
-            outputTokens: 17200000,
-            estimatedAiCost: 68400,
-            messages: 184000,
-            assessments: 12800,
-          },
-        })
-      )
+      map((res) => (res.dashboard ? res.dashboard : res.data || res))
     );
   }
 
   getAdminHealth(): Observable<AdminHealthDto> {
     return this.http.get<any>(`${this.baseUrl}/admin/health`).pipe(
-      map((res) => (res.health ? res.health : res.data || res)),
-      catchError(() =>
-        of({
-          api: 'OPERATIONAL',
-          database: 'OPERATIONAL',
-          databaseLatencyMs: 14,
-          uptimeSeconds: 864000,
-          memoryMb: 142,
-          timestamp: new Date().toISOString(),
-        })
-      )
+      map((res) => (res.health ? res.health : res.data || res))
     );
   }
 
   // ─── Settings ─────────────────────────────────────────────────────────
   getPlatformSettings(): Observable<PlatformSettingsDto> {
     return this.http.get<any>(`${this.baseUrl}/admin/settings`).pipe(
-      map((res) => (res.settings ? res.settings : res.data || res)),
-      catchError(() =>
-        of({
-          defaultAiModule: true,
-          assessmentHub: true,
-          alumniNetwork: true,
-          adminMfa: true,
-          supportApproval: true,
-          verboseAuthErrors: false,
-          provisioningPaused: false,
-          maintenanceMode: false,
-        })
-      )
+      map((res) => (res.settings ? res.settings : res.data || res))
     );
   }
 
   updatePlatformSettings(settings: Partial<PlatformSettingsDto>): Observable<PlatformSettingsDto> {
     return this.http.put<any>(`${this.baseUrl}/admin/settings`, settings).pipe(
-      map((res) => (res.settings ? res.settings : res.data || res)),
-      catchError(() => of(settings as PlatformSettingsDto))
+      map((res) => (res.settings ? res.settings : res.data || res))
     );
   }
 
@@ -227,8 +88,7 @@ export class PlatformAdminApiService {
           ? res
           : [];
         return list;
-      }),
-      catchError(() => of([]))
+      })
     );
   }
 
@@ -267,8 +127,7 @@ export class PlatformAdminApiService {
           ? res.data
           : [];
         return list;
-      }),
-      catchError(() => of([]))
+      })
     );
   }
 
@@ -291,8 +150,7 @@ export class PlatformAdminApiService {
           ? res.data
           : [];
         return list;
-      }),
-      catchError(() => of([]))
+      })
     );
   }
 
@@ -325,8 +183,7 @@ export class PlatformAdminApiService {
           ? res.data
           : [];
         return list;
-      }),
-      catchError(() => of([]))
+      })
     );
   }
 
@@ -341,33 +198,73 @@ export class PlatformAdminApiService {
     const params = new HttpParams().set('page', page).set('limit', limit);
     return this.http.get<any>(`${this.baseUrl}/audit`, { params }).pipe(
       map((res) => {
-        const list = Array.isArray(res) ? res : res.data || res.logs || [];
+        const list = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.logs?.rows)
+          ? res.logs.rows
+          : Array.isArray(res?.logs)
+          ? res.logs
+          : Array.isArray(res?.data)
+          ? res.data
+          : [];
         return list.map((item: any) => ({
-          id: item.id || Math.random().toString(36).substring(7),
-          timestamp: item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : item.timestamp || '06:12',
-          actor: item.actor || item.actor_user_id || 'Platform Admin',
-          institution: item.institution || 'SITRC',
-          action: item.action || 'Configuration updated',
-          entity: item.entity || 'Tenant',
-          result: item.result || 'Success',
-          correlation_id: item.correlation_id || `req_${(item.id || 'abc').substring(0, 6)}...`,
+          id: item.id,
+          timestamp: item.created_at || item.timestamp,
+          actor: item.actor || item.actor_user_id || '',
+          institution: item.institution || '',
+          action: item.action,
+          entity: item.entity || item.entity_type,
+          result: item.result || 'RECORDED',
+          correlation_id: item.correlation_id,
         }));
-      }),
-      catchError(() => of([]))
+      })
     );
   }
 
   // ─── Department creation for onboarding step 4 ──────────────────────
   createDepartment(payload: { institution_id: string; name: string; code: string }): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/departments`, payload).pipe(
-      catchError(() => of({ success: true, department: payload }))
-    );
+    return this.http.post<any>(`${this.baseUrl}/departments`, payload);
   }
 
   // ─── Institution creation for onboarding step 5 ─────────────────────
   createInstitution(payload: { name: string; code: string; domain: string; status: string }): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/institutions`, payload).pipe(
-      catchError(() => of({ success: true, institution: payload }))
+    return this.http.post<any>(`${this.baseUrl}/institutions`, payload);
+  }
+
+  // ─── Integrations & Sync Jobs ─────────────────────────────────────────
+  getIntegrations(): Observable<any[]> {
+    return this.http.get<any>(`${this.baseUrl}/integrations/connections`).pipe(
+      map((res) => {
+        const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        return list;
+      })
+    );
+  }
+
+  getSyncJobs(): Observable<any[]> {
+    return this.http.get<any>(`${this.baseUrl}/integrations/sync-jobs`).pipe(
+      map((res) => {
+        const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        return list;
+      })
+    );
+  }
+
+  getAiRuns(limit = 50): Observable<any[]> {
+    const params = new HttpParams().set('page', '1').set('limit', limit);
+    return this.http.get<any>(`${this.baseUrl}/tacie/runs`, { params }).pipe(
+      map((res) => {
+        const list = Array.isArray(res?.runs?.rows)
+          ? res.runs.rows
+          : Array.isArray(res?.runs)
+          ? res.runs
+          : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res)
+          ? res
+          : [];
+        return list;
+      })
     );
   }
 }

@@ -188,6 +188,7 @@ resource "aws_secretsmanager_secret_version" "ai" {
     api_key         = var.ai_service_api_key
     api_keys        = "careeros-api=${var.ai_service_api_key}"
     bedrock_api_key = var.bedrock_api_key
+    auth_token_secret = var.auth_token_secret
   })
 }
 
@@ -374,6 +375,7 @@ resource "aws_ecs_task_definition" "api" {
     secrets = [
       { name = "DB_PASSWORD", valueFrom = "${aws_secretsmanager_secret.database.arn}:password::" },
       { name = "AI_SERVICE_API_KEY", valueFrom = "${aws_secretsmanager_secret.ai.arn}:api_key::" },
+      { name = "AUTH_TOKEN_SECRET", valueFrom = "${aws_secretsmanager_secret.ai.arn}:auth_token_secret::" },
     ]
     healthCheck = { command = ["CMD-SHELL", "wget -qO- http://localhost:5000/api/health || exit 1"], interval = 30, timeout = 5, retries = 3, startPeriod = 60 }
     logConfiguration = { logDriver = "awslogs", options = local.log_options_api }

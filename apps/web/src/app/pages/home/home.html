@@ -1,5 +1,45 @@
-<!-- src/app/pages/home/home.component.html -->
-<section class="block">
+<div class="flex min-h-screen bg-[#f4f6fb] text-[#12162b]">
+  <!-- Persistent College Student Sidebar -->
+  <app-sidebar></app-sidebar>
+
+  <!-- Main Content Area -->
+  <div class="flex flex-1 flex-col overflow-x-hidden">
+    <!-- Top Header Bar with College DB Isolation Badge & Student Auth Info -->
+    <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#e3e6ef] bg-white px-6 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="rounded-full bg-[#eef0ff] px-3 py-1 font-mono text-xs font-semibold text-[#4a33e0]">
+          {{ auth.institutionName() }} · Code {{ auth.collegeCode() }}
+        </span>
+        <span class="rounded-full bg-emerald-50 px-2.5 py-0.5 font-mono text-xs font-semibold text-emerald-700">
+          ● DB: {{ auth.databaseName() }}
+        </span>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <div class="text-xs font-semibold text-[#12162b]">{{ auth.userName() || 'Student' }}</div>
+          <div class="font-mono text-[11px] text-[#5a6177]">{{ auth.userEmail() || '—' }}</div>
+        </div>
+        <button
+          type="button"
+          (click)="logout()"
+          class="rounded-lg border border-[#f1c8c4] bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50">
+          Sign Out
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="flex-1 p-6">
+      @if (portal.shellLoadError() || loadError()) {
+        <div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+          <strong>API request failed.</strong> {{ portal.shellLoadError() || loadError() }}
+          <button type="button" class="ml-3 underline" (click)="loadData(auth.studentId()!)">Retry</button>
+        </div>
+      }
+      @if (portal.isShellLoading() || isLoading()) {
+        <div class="mb-5 rounded-xl border border-[#dfe3f0] bg-white px-4 py-3 text-sm text-[#5a6177]">Loading student data from the API…</div>
+      }
+      <section class="block">
   <!-- Header -->
   <div class="mb-5 flex flex-wrap items-end justify-between gap-4">
     <div>
@@ -236,3 +276,6 @@
     </div>
   </div>
 </section>
+    </main>
+  </div>
+</div>

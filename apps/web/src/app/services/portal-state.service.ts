@@ -1,5 +1,6 @@
 import { Injectable, inject, signal, computed, effect } from '@angular/core';
-import { forkJoin, of, catchError } from 'rxjs';
+import { Router } from '@angular/router';
+import { finalize, forkJoin } from 'rxjs';
 import { AuthSessionService } from '../core/auth/auth-session.service';
 import { ApiService } from './api.service';
 import {
@@ -19,6 +20,7 @@ import {
 export class PortalStateService {
   private readonly auth = inject(AuthSessionService);
   private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
 
   // Live Backend Signals
   readonly currentUser = signal<UserDto | null>(null);
@@ -28,6 +30,8 @@ export class PortalStateService {
   readonly notifications = signal<NotificationDto[]>([]);
   readonly conversations = signal<ConversationDto[]>([]);
   readonly savedItems = signal<SavedItemDto[]>([]);
+  readonly isShellLoading = signal(false);
+  readonly shellLoadError = signal<string | null>(null);
 
   readonly totalOpenJobsCount = signal<number>(0);
   readonly pendingSlaCount = signal<number>(0);
@@ -69,12 +73,12 @@ export class PortalStateService {
     return {
       initials: initials || 'ST',
       fullName,
-      degree: student?.degree ?? 'B.E.',
+      degree: student?.degree ?? '—',
       enrollmentNumber: student?.enrollment_number ?? '—',
-      batchYear: student?.batch_year ?? 2026,
+      batchYear: student?.batch_year ?? '—',
       cgpa: academic?.cgpa ?? '—',
-      instituteCode: inst?.code ?? 'CAREEROS',
-      departmentLabel: 'Placement Cell'
+      instituteCode: inst?.code ?? '—',
+      departmentLabel: student?.department_id ?? '—'
     };
   });
 
@@ -141,30 +145,41 @@ export class PortalStateService {
   }
 
   initializeShellData(userId: string, studentId: string): void {
+    this.isShellLoading.set(true);
+    this.shellLoadError.set(null);
     forkJoin({
-      user: this.api.getUserById(userId).pipe(catchError(() => of(null))),
-      student: this.api.getStudentById(studentId).pipe(catchError(() => of(null))),
-      academics: this.api.getAcademicRecords(1, 10).pipe(catchError(() => of([]))),
-      institutions: this.api.getInstitutions(1, 5).pipe(catchError(() => of([]))),
-      opportunities: this.api.getJobOpportunities(1, 50).pipe(catchError(() => of([]))),
-      conversations: this.api.getConversations().pipe(catchError(() => of([]))),
-      notifications: this.api.getNotifications().pipe(catchError(() => of([]))),
-      saved: this.api.getSavedItems(userId).pipe(catchError(() => of([])))
-    }).subscribe(({ user, student, academics, institutions, opportunities, conversations, notifications, saved }) => {
-      if (user) this.currentUser.set(user);
-      if (student) this.studentProfile.set(student);
-      const rec = academics.find(r => r.student_id === studentId) ?? academics[0] ?? null;
-      this.latestAcademicRecord.set(rec);
-      if (institutions.length) this.currentInstitution.set(institutions[0]);
-      this.totalOpenJobsCount.set(opportunities.length);
-      this.conversations.set(conversations);
-      this.notifications.set(notifications);
-      this.savedItems.set(saved);
+      user: this.api.getUserById(userId),
+      student: this.api.getStudentById(studentId),
+      academics: this.api.getAcademicRecords(1, 10),
+      institutions: this.api.getInstitutions(1, 5),
+      opportunities: this.api.getJobOpportunities(1, 50),
+      conversations: this.api.getConversations(),
+      notifications: this.api.getNotifications(),
+      saved: this.api.getSavedItems(userId)
+    })
+      .pipe(finalize(() => this.isShellLoading.set(false)))
+      .subscribe({
+        next: ({ user, student, academics, institutions, opportunities, conversations, notifications, saved }) => {
+          this.currentUser.set(user);
+          this.studentProfile.set(student);
+          const rec = academics.find(r => r.student_id === studentId) ?? academics[0] ?? null;
+          this.latestAcademicRecord.set(rec);
+          this.currentInstitution.set(institutions[0] ?? null);
+          this.totalOpenJobsCount.set(opportunities.length);
+          this.conversations.set(conversations);
+          this.notifications.set(notifications);
+          this.savedItems.set(saved);
 
-      if (conversations.length && !this.activeConversationId()) {
-        this.activeConversationId.set(conversations[0].id);
+          if (conversations.length && !this.activeConversationId()) {
+            this.activeConversationId.set(conversations[0].id);
+          }
+        },
+        error: (error) => {
+          const message = error?.error?.message || error?.message || 'The student portal API data could not be loaded.';
+          this.shellLoadError.set(message);
+        }
       }
-    });
+    );
   }
 
   navigateToPage(page: PageId, subTab?: string, appView?: 'pipeline' | 'offers'): void {
@@ -180,6 +195,12 @@ export class PortalStateService {
     }
     if (subTab) this.activeSubTab.set(subTab);
     if (appView) this.activeApplicationView.set(appView);
+
+    if (page === 'home') {
+      this.router.navigate(['/portal']);
+    } else if (page === 'jobs') {
+      this.router.navigate(['/jobs']);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 

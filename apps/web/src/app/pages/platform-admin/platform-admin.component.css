@@ -292,6 +292,89 @@
   min-width: 0;
 }
 
+.section-gap {
+  margin-top: 16px;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.empty-state {
+  padding: 28px 18px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.api-message {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.api-message b,
+.api-message span {
+  display: block;
+}
+
+.api-message span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.api-message-error {
+  border-color: #f1c8c4;
+  background: var(--redSoft);
+}
+
+.loading-state {
+  margin-bottom: 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.loading-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: loadingPulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes loadingPulse {
+  to { opacity: 0.25; transform: scale(0.75); }
+}
+
+.api-inline-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #f1c8c4;
+  border-radius: 7px;
+  background: var(--redSoft);
+  color: var(--red);
+  font-size: 11px;
+}
+
+.admin-invite-row {
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.6fr) auto;
+  align-items: end;
+}
+
+.compact-control {
+  min-width: 170px;
+  height: 32px;
+}
+
 .page {
   display: block;
   width: 100%;

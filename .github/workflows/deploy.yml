@@ -52,6 +52,7 @@ jobs:
         env:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
+          TF_VAR_auth_token_secret: ${{ secrets.TF_VAR_AUTH_TOKEN_SECRET }}
           TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}
           TF_VAR_bedrock_model: ${{ vars.TF_VAR_BEDROCK_MODEL }}
         shell: bash
@@ -84,6 +85,7 @@ jobs:
         env:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
+          TF_VAR_auth_token_secret: ${{ secrets.TF_VAR_AUTH_TOKEN_SECRET }}
           TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}
           TF_VAR_bedrock_model: ${{ vars.TF_VAR_BEDROCK_MODEL }}
         run: terraform apply -auto-approve -input=false -var="environment=${ENVIRONMENT}" -var="image_tag=${{ github.sha }}-${{ github.run_attempt }}" -var="desired_count=1"

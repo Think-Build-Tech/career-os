@@ -27,10 +27,18 @@ import { programRouter } from "../modules/program/program.router";
 import { reputationRouter } from "../modules/reputation/reputation.router";
 import { rewardRouter } from "../modules/reward/reward.router";
 import { adminRouter } from "../modules/admin/admin.router";
+import { authRouter } from "../modules/auth/auth.router";
+import { requireAuthentication } from "../modules/auth/auth.middleware";
 
 export const apiRouter = Router();
 
 apiRouter.use("/health", healthRouter);
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/control", controlRouter);
+apiRouter.use("/admin", adminRouter);
+
+apiRouter.use(requireAuthentication);
+
 apiRouter.use("/audit", auditRouter);
 apiRouter.use("/students", studentRouter);
 apiRouter.use("/institutions", institutionRouter);
@@ -48,7 +56,6 @@ apiRouter.use("/users", userRouter);
 apiRouter.use("/identity", identityRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/learning", learningRouter);
-apiRouter.use("/control", controlRouter);
 apiRouter.use("/academic", academicRouter);
 apiRouter.use("/cohorts", cohortRouter);
 apiRouter.use("/integrations", integrationRouter);
@@ -57,5 +64,4 @@ apiRouter.use("/moderation", moderationRouter);
 apiRouter.use("/programs", programRouter);
 apiRouter.use("/reputation", reputationRouter);
 apiRouter.use("/rewards", rewardRouter);
-apiRouter.use("/admin", adminRouter);
 

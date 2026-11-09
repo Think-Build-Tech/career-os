@@ -1,0 +1,87 @@
+<!-- apps/web/src/app/pages/admin-login/admin-login.component.html -->
+
+<div class="admin-login-wrapper">
+  <div class="admin-card">
+    <div class="security-badge">
+      <span class="shield-icon">🛡️</span>
+      <span>PLATFORM CONTROL PLANE · RESTRICTED ACCESS</span>
+    </div>
+
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <div class="brand-text">
+        <b>CareerOS</b>
+        <span>PLATFORM SUPER-ADMIN CONSOLE</span>
+      </div>
+    </div>
+
+    <div class="header-copy">
+      <h2>Super-Administrator Authentication</h2>
+      <p>
+        Authorized platform personnel only. Access tenant database provisioning, multi-tenant database clusters, and global configuration flags.
+      </p>
+    </div>
+
+    <form (ngSubmit)="authenticateAdmin()" class="auth-form">
+      <div class="form-group">
+        <label>Platform Administrator Email</label>
+        <input
+          type="email"
+          class="admin-input"
+          placeholder="Administrator email"
+          [(ngModel)]="adminEmail"
+          name="adminEmail"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <input
+          type="password"
+          class="admin-input"
+          placeholder="••••••••••••••••"
+          [(ngModel)]="adminPassword"
+          name="adminPassword"
+          required
+        />
+      </div>
+
+      @if (errorMessage) {
+        <div class="error-box">
+          ⚠️ {{ errorMessage }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        class="btn-submit-auth"
+        [disabled]="isAuthenticating">
+        {{ isAuthenticating ? 'Authorizing Session...' : 'Authenticate & Launch Console →' }}
+      </button>
+
+      <button
+        type="button"
+        class="btn-fast-auth"
+        [disabled]="isAuthenticating"
+        (click)="fastDevLogin()"
+        style="width: 100%; margin-top: 10px; padding: 10px; background: #f3e8ff; color: #6b21a8; border: 1px solid #c084fc; border-radius: 8px; font-weight: 600; cursor: pointer;">
+        ? 1-Click Fast Dev Authentication as Super Admin
+      </button>
+
+
+      @if (bootstrapRequired) {
+        <button type="button" class="btn-fast-auth" [disabled]="isAuthenticating" (click)="bootstrapAdmin()">
+          Initialize first platform administrator
+        </button>
+      }
+    </form>
+
+    <div class="footer-links">
+      <a routerLink="/login" class="back-link">
+        ← Return to College Portal Login
+      </a>
+      <span class="version-tag">API-authenticated session</span>
+    </div>
+  </div>
+</div>

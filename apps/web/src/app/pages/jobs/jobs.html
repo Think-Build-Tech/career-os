@@ -1,1 +1,197 @@
-<p>jobs works!</p>
+<div class="flex min-h-screen bg-[#f4f6fb] text-[#12162b]">
+  <!-- Persistent College Student Sidebar -->
+  <app-sidebar></app-sidebar>
+
+  <!-- Main Content Area -->
+  <div class="flex flex-1 flex-col overflow-x-hidden">
+    <!-- Top Header Bar with College DB Isolation Badge & Student Auth Info -->
+    <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#e3e6ef] bg-white px-6 shadow-sm">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="rounded-full bg-[#eef0ff] px-3 py-1 font-mono text-xs font-semibold text-[#4a33e0]">
+          {{ auth.institutionName() }} · Code {{ auth.collegeCode() }}
+        </span>
+        <span class="rounded-full bg-emerald-50 px-2.5 py-0.5 font-mono text-xs font-semibold text-emerald-700">
+          ● DB: {{ auth.databaseName() }}
+        </span>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <div class="text-xs font-semibold text-[#12162b]">{{ auth.userName() || 'Student' }}</div>
+          <div class="font-mono text-[11px] text-[#5a6177]">{{ auth.userEmail() || '—' }}</div>
+        </div>
+        <button
+          type="button"
+          (click)="logout()"
+          class="rounded-lg border border-[#f1c8c4] bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50">
+          Sign Out
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="flex-1 p-6">
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-[#12162b]">Campus Placement Opportunities</h1>
+          <p class="text-sm text-[#5a6177]">
+            Active drives for {{ auth.institutionName() }} · Real-time eligibility & 1-click verified resume application
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            (click)="loadJobs()"
+            [disabled]="isLoading()"
+            class="inline-flex items-center gap-1.5 rounded-lg border border-[#e3e6ef] bg-white px-3 py-2 text-xs font-semibold text-[#12162b] hover:bg-[#f9fafc]">
+            <span>⟳</span> Refresh Drives
+          </button>
+        </div>
+      </div>
+
+      <!-- Feedback Banners -->
+      @if (successMessage()) {
+        <div class="mb-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+          <div class="flex items-center gap-2">
+            <span>✓</span>
+            <span>{{ successMessage() }}</span>
+          </div>
+          <button type="button" (click)="successMessage.set(null)" class="text-emerald-700 hover:text-emerald-950">×</button>
+        </div>
+      }
+      @if (errorMessage()) {
+        <div class="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <div class="flex items-center gap-2">
+            <span>⚠</span>
+            <span>{{ errorMessage() }}</span>
+          </div>
+          <button type="button" (click)="errorMessage.set(null)" class="text-red-700 hover:text-red-950">×</button>
+        </div>
+      }
+
+      <!-- Search & Filters -->
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#e3e6ef] bg-white p-4 shadow-sm">
+        <div class="flex flex-1 items-center gap-2 rounded-lg border border-[#e3e6ef] bg-[#f9fafc] px-3 py-2">
+          <span class="text-[#8b91ad]">🔍</span>
+          <input
+            type="text"
+            placeholder="Search by job title, company name, or location..."
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            class="w-full bg-transparent text-sm text-[#12162b] placeholder-[#8b91ad] focus:outline-none" />
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            (click)="selectedTier.set('ALL')"
+            [class.bg-[#4a33e0]]="selectedTier() === 'ALL'"
+            [class.text-white]="selectedTier() === 'ALL'"
+            [class.bg-[#f4f6fb]]="selectedTier() !== 'ALL'"
+            [class.text-[#5a6177]]="selectedTier() !== 'ALL'"
+            class="rounded-lg px-3 py-1.5 text-xs font-semibold transition hover:opacity-90">
+            All Drives ({{ jobs().length }})
+          </button>
+          <button
+            type="button"
+            (click)="selectedTier.set('TIER_1_SUPER_DREAM')"
+            [class.bg-[#4a33e0]]="selectedTier() === 'TIER_1_SUPER_DREAM'"
+            [class.text-white]="selectedTier() === 'TIER_1_SUPER_DREAM'"
+            [class.bg-[#f4f6fb]]="selectedTier() !== 'TIER_1_SUPER_DREAM'"
+            [class.text-[#5a6177]]="selectedTier() !== 'TIER_1_SUPER_DREAM'"
+            class="rounded-lg px-3 py-1.5 text-xs font-semibold transition hover:opacity-90">
+            ★ Super Dream
+          </button>
+          <button
+            type="button"
+            (click)="selectedTier.set('DREAM')"
+            [class.bg-[#4a33e0]]="selectedTier() === 'DREAM'"
+            [class.text-white]="selectedTier() === 'DREAM'"
+            [class.bg-[#f4f6fb]]="selectedTier() !== 'DREAM'"
+            [class.text-[#5a6177]]="selectedTier() !== 'DREAM'"
+            class="rounded-lg px-3 py-1.5 text-xs font-semibold transition hover:opacity-90">
+            Dream
+          </button>
+          <button
+            type="button"
+            (click)="selectedTier.set('CORE')"
+            [class.bg-[#4a33e0]]="selectedTier() === 'CORE'"
+            [class.text-white]="selectedTier() === 'CORE'"
+            [class.bg-[#f4f6fb]]="selectedTier() !== 'CORE'"
+            [class.text-[#5a6177]]="selectedTier() !== 'CORE'"
+            class="rounded-lg px-3 py-1.5 text-xs font-semibold transition hover:opacity-90">
+            Core
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      @if (isLoading()) {
+        <div class="flex items-center justify-center p-12 text-sm text-[#5a6177]">
+          <span>Loading placement opportunities from database...</span>
+        </div>
+      }
+
+      <!-- Jobs Grid -->
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        @for (job of filteredJobs(); track job.id) {
+          <div class="flex flex-col justify-between rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm transition hover:shadow-md">
+            <div>
+              <div class="mb-3 flex items-start justify-between gap-2">
+                <div>
+                  <span class="rounded-md bg-[#eef0ff] px-2 py-0.5 text-[11px] font-semibold text-[#4a33e0]">
+                    {{ job.company?.tier || job.tier_label || 'PLACEMENT DRIVE' }}
+                  </span>
+                  <h3 class="mt-2 text-base font-bold text-[#12162b]">{{ job.title }}</h3>
+                  <div class="text-xs font-semibold text-[#5a6177]">{{ job.company?.name || job.company_name || 'Recruiting Partner' }}</div>
+                </div>
+                <div class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#f4f6fb] font-bold text-[#4a33e0]">
+                  {{ (job.company?.name || job.company_name || job.title).slice(0, 2).toUpperCase() }}
+                </div>
+              </div>
+
+              <div class="my-3 space-y-1.5 border-y border-[#f0f2f8] py-3 text-xs text-[#5a6177]">
+                <div class="flex items-center justify-between">
+                  <span>Location</span>
+                  <b class="text-[#12162b]">{{ job.location || 'Pan India / Hybrid' }}</b>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span>Job Type</span>
+                  <b class="text-[#12162b]">{{ job.job_type || 'FULL_TIME' }}</b>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span>Total CTC</span>
+                  <b class="font-mono text-sm font-bold text-emerald-700">{{ formatCtc(job.total_ctc) }}</b>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-2 flex items-center justify-between gap-3">
+              <span class="text-[11px] text-[#8b91ad]">Verified via TPO</span>
+              @if (isApplied(job.id)) {
+                <span class="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
+                  <span>✓</span> Applied
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  (click)="apply(job)"
+                  [disabled]="applyingJobId() === job.id"
+                  class="inline-flex items-center justify-center rounded-lg bg-[#4a33e0] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#3c29b8] disabled:opacity-50">
+                  {{ applyingJobId() === job.id ? 'Submitting…' : 'Apply with Resume' }}
+                </button>
+              }
+            </div>
+          </div>
+        } @empty {
+          @if (!isLoading()) {
+            <div class="col-span-full rounded-xl border border-dashed border-[#e3e6ef] bg-white p-12 text-center text-[#5a6177]">
+              <div class="mb-2 text-2xl">📋</div>
+              <p class="font-semibold text-[#12162b]">No job opportunities match your criteria</p>
+              <p class="text-xs">Try selecting a different tier or clearing your search filter.</p>
+            </div>
+          }
+        }
+      </div>
+    </main>
+  </div>
+</div>

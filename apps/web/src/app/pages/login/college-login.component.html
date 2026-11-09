@@ -1,0 +1,156 @@
+<!-- apps/web/src/app/pages/login/college-login.component.html -->
+
+<div class="login-wrapper">
+  <!-- Top brand bar -->
+  <header class="login-header">
+    <div class="brand">
+      <div class="brand-logo">C</div>
+      <div class="brand-title">
+        <b>CareerOS</b>
+        <span>COLLEGE PLACEMENT PORTAL</span>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="isolation-pill">● Tenant-isolated access</span>
+      <a routerLink="/admin/login" class="admin-link-discrete" title="Platform Super-Administrator Login">
+        🔒 Platform Admin
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Split Content -->
+  <main class="login-main">
+    <div class="login-card">
+      <div class="card-hero">
+        <h2>Sign In to Your Institution</h2>
+        <p>Access your college placement pipeline, pre-screened drives, and verified credentials.</p>
+      </div>
+
+      <!-- Step 1: Select College Institution -->
+      <section class="section-box college-select-box">
+        <label class="section-label">1. SELECT YOUR COLLEGE INSTITUTION</label>
+        
+        <!-- Quick Pick Chips -->
+        <div class="quick-chips">
+          @for (c of colleges(); track c.id) {
+            <button
+              type="button"
+              class="college-chip"
+              [class.active]="collegeCode() === c.college_code"
+              (click)="selectQuickCollege(c)">
+              <b>{{ c.college_code }}</b> · {{ c.name }}
+            </button>
+          }
+        </div>
+
+        <!-- Search / Code Input -->
+        <div class="search-row">
+          <div class="input-with-icon">
+            <span class="input-icon">🏛</span>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="Enter college code or slug"
+              [ngModel]="collegeCode()"
+              (ngModelChange)="collegeCode.set($event)"
+              (keyup)="onCodeKeyup($event)"
+            />
+          </div>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            [disabled]="isResolving()"
+            (click)="resolveCollege(collegeCode())">
+            {{ isResolving() ? 'Verifying...' : 'Verify College' }}
+          </button>
+        </div>
+
+        <!-- Resolution Error -->
+        @if (resolutionError()) {
+          <div class="error-banner">
+            ⚠️ {{ resolutionError() }}
+          </div>
+        }
+
+        <!-- Real-Time Verified Database Isolation Card -->
+        @if (resolvedTenant(); as res) {
+          <div class="isolation-card">
+            <div class="isolation-header">
+              <span class="status-dot"></span>
+              <b>TENANT VERIFIED · DATABASE ISOLATED</b>
+            </div>
+            <div class="isolation-details">
+              <div class="college-title">
+                <b>{{ res.tenant.name }}</b> (Code: {{ res.tenant.college_code }})
+              </div>
+              <div class="db-meta">
+                <span class="db-pill">DB: {{ res.isolation.database_name }}</span>
+                <span class="db-pill">{{ res.isolation.provider }}</span>
+                <span class="db-pill">{{ res.isolation.schema_version }}</span>
+              </div>
+            </div>
+          </div>
+        }
+      </section>
+
+      <!-- Step 2: Student Sign In -->
+      <section class="section-box student-signin-box">
+        <label class="section-label">2. STUDENT CREDENTIALS</label>
+
+        <!-- 1-Click Instant Sign In -->
+        <button
+          type="button"
+          class="btn btn-instant"
+          [disabled]="isLoggingIn"
+          (click)="loginAsDemoStudent()"
+          style="width: 100%; margin-bottom: 14px; padding: 10px; background: #eef0ff; color: #4a33e0; border: 1px solid #4a33e0; border-radius: 8px; font-weight: 600; cursor: pointer;">
+          ? 1-Click Sign In as Aarav Sharma (B.Tech CSE � 9.15 CGPA)
+        </button>
+
+        <form (ngSubmit)="onSubmitLogin()" class="login-form">
+          <div class="form-group">
+            <label>Registered student email</label>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="Student email"
+              [(ngModel)]="studentIdOrEmail"
+              name="studentIdOrEmail"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Password / Student PIN</label>
+            <input
+              type="password"
+              class="form-input"
+              placeholder="••••••••"
+              [(ngModel)]="studentPassword"
+              name="studentPassword"
+              required
+            />
+          </div>
+
+          @if (loginError) {
+            <div class="error-banner">
+              ⚠️ {{ loginError }}
+            </div>
+          }
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="isLoggingIn">
+            {{ isLoggingIn ? 'Entering College Portal...' : 'Sign In to Placement Command Center →' }}
+          </button>
+        </form>
+      </section>
+
+      <footer class="login-card-footer">
+        <span>Protected by CareerOS Multi-Tenant Physical Isolation Protocol.</span>
+        <a routerLink="/admin/login" class="admin-footer-link">Platform Super-Admin Access →</a>
+      </footer>
+    </div>
+  </main>
+</div>

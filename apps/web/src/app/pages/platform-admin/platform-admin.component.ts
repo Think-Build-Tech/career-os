@@ -1,23 +1,11 @@
-// apps/web/src/app/pages/platform-admin/platform-admin.component.ts
-
-import {
-  Component,
-  inject,
-  OnInit,
-  OnDestroy,
-  signal,
-} from '@angular/core';
-
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-
-import {
-  PlatformAdminStateService,
-  ADMIN_PAGE_NAMES,
-} from '../../services/platform-admin-state.service';
-
-import { AuthSessionService } from '../../core/auth/auth-session.service';
 import { AdminPageId } from '../../models/platform-admin.model';
+import {
+  ADMIN_PAGE_NAMES,
+  PlatformAdminStateService,
+} from '../../services/platform-admin-state.service';
 
 @Component({
   selector: 'app-platform-admin',
@@ -26,74 +14,13 @@ import { AdminPageId } from '../../models/platform-admin.model';
   templateUrl: './platform-admin.component.html',
   styleUrls: ['./platform-admin.component.css'],
 })
-export class PlatformAdminComponent implements OnInit, OnDestroy {
+export class PlatformAdminComponent implements OnInit {
   readonly state = inject(PlatformAdminStateService);
-  readonly auth = inject(AuthSessionService);
-
-  /**
-   * UI-only state.
-   *
-   * This belongs to the component because it only controls
-   * whether the confirmation dialog is visible.
-   */
-  readonly isMaintenanceConfirmModalOpen = signal(false);
-
-  private readonly hashListener = () => {
-    const raw = window.location.hash.replace('#', '') as AdminPageId;
-
-    if (ADMIN_PAGE_NAMES[raw]) {
-      this.state.activePage.set(raw);
-    }
-  };
+  readonly auth = this.state.auth;
 
   ngOnInit(): void {
-    window.addEventListener('hashchange', this.hashListener);
-    this.hashListener();
-  }
-
-  ngOnDestroy(): void {
-    window.removeEventListener('hashchange', this.hashListener);
-  }
-
-  /**
-   * Called when the Enable / Disable maintenance button is clicked.
-   */
-  onMaintenanceButtonClick(): void {
-    const maintenanceEnabled =
-      this.state.platformSettings().maintenanceMode;
-
-    /**
-     * If maintenance mode is already enabled,
-     * disable it immediately.
-     *
-     * We only need confirmation before enabling it.
-     */
-    if (maintenanceEnabled) {
-      this.state.toggleSetting('maintenanceMode');
-      return;
-    }
-
-    /**
-     * Maintenance is currently disabled,
-     * so ask for confirmation.
-     */
-    this.isMaintenanceConfirmModalOpen.set(true);
-  }
-
-  /**
-   * User cancelled the operation.
-   */
-  closeMaintenanceConfirmModal(): void {
-    this.isMaintenanceConfirmModalOpen.set(false);
-  }
-
-  /**
-   * User confirmed enabling maintenance mode.
-   */
-  confirmEnableMaintenance(): void {
-    this.isMaintenanceConfirmModalOpen.set(false);
-
-    this.state.toggleSetting('maintenanceMode');
+    // Data refreshed on component mount
+    this.state.refreshAllData();
   }
 
   onNavClick(page: AdminPageId): void {
@@ -101,17 +28,49 @@ export class PlatformAdminComponent implements OnInit, OnDestroy {
   }
 
   onInstitutionSearch(event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
-    this.state.institutionsSearchQuery.set(val);
+    this.state.institutionsSearchQuery.set((event.target as HTMLInputElement).value);
   }
 
   onAiSearch(event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
-    this.state.aiTenantSearchQuery.set(val);
+    this.state.aiTenantSearchQuery.set((event.target as HTMLInputElement).value);
   }
 
   quickSelectCollege(code: string): void {
     this.state.loginCodeInput.set(code);
     this.state.resolveCollege(code);
+  }
+
+  logout(): void {
+    this.auth.clearSessionOnLogout();
+  }
+
+  initials(name?: string): string {
+    if (!name) return '—';
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('');
+  }
+
+  formatNumber(value: unknown): string {
+    const number = Number(value ?? 0);
+    return Number.isFinite(number) ? new Intl.NumberFormat('en-IN').format(number) : '—';
+  }
+
+  formatCurrency(value: unknown): string {
+    const number = Number(value ?? 0);
+    return Number.isFinite(number)
+      ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(number)
+      : '—';
+  }
+
+  statusClass(status?: string): string {
+    const value = String(status || '').toUpperCase();
+    if (['ACTIVE', 'OPERATIONAL', 'HEALTHY', 'COMPLETED', 'SUCCESS', 'RECORDED'].includes(value)) return 'green';
+    if (['FAILED', 'OUTAGE', 'UNAVAILABLE', 'ATTENTION', 'MIGRATION_ISSUE'].includes(value)) return 'red';
+    if (['PROVISIONING', 'RUNNING', 'QUEUED', 'DEGRADED', 'CREATING', 'INVITED'].includes(value)) return 'amber';
+    return 'gray';
   }
 }

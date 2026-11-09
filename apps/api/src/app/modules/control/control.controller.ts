@@ -16,115 +16,6 @@ const subscriptionService = new SubscriptionService();
 const adminService = new PlatformAdminService();
 const jobService = new TenantProvisioningJobService();
 
-// Pre-configured prototype tenants for instant login resolution & database isolation
-const PROTOTYPE_TENANTS = [
-  {
-    id: "00000000-0000-0000-0000-000000000001",
-    college_code: "4821",
-    name: "SITRC (Sandip Institute of Technology & Research Centre)",
-    slug: "sitrc",
-    institution_type: "ENGINEERING_COLLEGE",
-    status: "ACTIVE",
-    database: {
-      provider: "PostgreSQL 17",
-      database_name: "careeros_sitrc",
-      host_reference: "db.careeros.internal:5432",
-      secret_reference: "vault://db/tenants/sitrc",
-      region: "ap-south-1 (Mumbai)",
-      schema_version: "v28",
-      status: "HEALTHY",
-      storage_used: "18.7 GB",
-      user_count: 3428,
-      plan: "Enterprise",
-      monthly_cost: "₹18,420"
-    }
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000002",
-    college_code: "7314",
-    name: "ABC College of Engineering",
-    slug: "abc-coe",
-    institution_type: "ENGINEERING_COLLEGE",
-    status: "ACTIVE",
-    database: {
-      provider: "PostgreSQL 17",
-      database_name: "careeros_abc",
-      host_reference: "db.careeros.internal:5432",
-      secret_reference: "vault://db/tenants/abc",
-      region: "ap-south-1 (Mumbai)",
-      schema_version: "v28",
-      status: "HEALTHY",
-      storage_used: "42.2 GB",
-      user_count: 2102,
-      plan: "Standard",
-      monthly_cost: "₹12,980"
-    }
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000003",
-    college_code: "2608",
-    name: "XYZ Institute of Technology",
-    slug: "xyz-iot",
-    institution_type: "ENGINEERING_COLLEGE",
-    status: "PROVISIONING",
-    database: {
-      provider: "PostgreSQL 17",
-      database_name: "careeros_xyz",
-      host_reference: "db.careeros.internal:5432",
-      secret_reference: "vault://db/tenants/xyz",
-      region: "ap-south-1 (Mumbai)",
-      schema_version: "v27",
-      status: "PROVISIONING",
-      storage_used: "0.2 GB",
-      user_count: 0,
-      plan: "Standard",
-      monthly_cost: "₹0"
-    }
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000004",
-    college_code: "9143",
-    name: "DEF College of Engineering",
-    slug: "def-college",
-    institution_type: "ENGINEERING_COLLEGE",
-    status: "ATTENTION",
-    database: {
-      provider: "PostgreSQL 17",
-      database_name: "careeros_def",
-      host_reference: "db.careeros.internal:5432",
-      secret_reference: "vault://db/tenants/def",
-      region: "ap-south-1 (Mumbai)",
-      schema_version: "v26",
-      status: "MIGRATION_ISSUE",
-      storage_used: "15.6 GB",
-      user_count: 1927,
-      plan: "Enterprise",
-      monthly_cost: "₹9,812"
-    }
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000005",
-    college_code: "5530",
-    name: "PQR Vidyapeeth",
-    slug: "pqr-vidyapeeth",
-    institution_type: "UNIVERSITY",
-    status: "SUSPENDED",
-    database: {
-      provider: "PostgreSQL 17",
-      database_name: "careeros_pqr",
-      host_reference: "db.careeros.internal:5432",
-      secret_reference: "vault://db/tenants/pqr",
-      region: "ap-south-1 (Mumbai)",
-      schema_version: "v27",
-      status: "PAUSED",
-      storage_used: "9.4 GB",
-      user_count: 1204,
-      plan: "Standard",
-      monthly_cost: "₹0"
-    }
-  }
-];
-
 // College Tenant Resolution with Database Isolation Details
 export async function resolveTenant(req: Request, res: Response) {
   try {
@@ -153,70 +44,33 @@ export async function resolveTenant(req: Request, res: Response) {
       whereConditions.push({ id: code });
     }
 
-    // 1. Check database for tenant first
-    try {
-      const found = await Tenant.findOne({
-        where: {
-          [Op.or]: whereConditions
-        },
-        include: [{ model: TenantDatabase, as: "database" }]
-      });
+    const found = await Tenant.findOne({
+      where: { [Op.or]: whereConditions },
+      include: [{ model: TenantDatabase, as: "database" }]
+    });
 
-      if (found) {
-        const plain: any = found.get({ plain: true });
-        const dbInfo = plain.database || {
-          provider: "PostgreSQL 17",
-          database_name: `careeros_${plain.slug}`,
-          host_reference: "db.careeros.internal:5432",
-          secret_reference: `vault://db/tenants/${plain.slug}`,
-          region: "ap-south-1 (Mumbai)",
-          schema_version: "v28",
-          status: "ACTIVE"
-        };
-
-        return res.status(200).json({
-          success: true,
-          tenant: {
-            ...plain,
-            database: dbInfo
-          },
-          isolation: {
-            is_isolated_database: true,
-            database_name: dbInfo.database_name,
-            provider: dbInfo.provider || "PostgreSQL 17",
-            schema_version: dbInfo.schema_version || "v28",
-            status: dbInfo.status || "ACTIVE",
-          },
-          message: `Tenant resolved: ${plain.name} (${plain.college_code})`
+    if (found) {
+      const plain: any = found.get({ plain: true });
+      if (!plain.database) {
+        return res.status(409).json({
+          success: false,
+          message: `Tenant "${plain.name}" does not have a registered isolated database`,
         });
       }
-    } catch {
-      // In case tables not yet synced, proceed to fallback lookup
-    }
-
-    // 2. Check fallback prototype colleges (SITRC, ABC, XYZ, DEF, PQR)
-    const proto = PROTOTYPE_TENANTS.find(
-      (t) =>
-        t.college_code === code ||
-        t.slug.toLowerCase() === code.toLowerCase() ||
-        t.id === code ||
-        t.name.toLowerCase().includes(code.toLowerCase())
-    );
-
-    if (proto) {
+      const dbInfo = plain.database;
       return res.status(200).json({
         success: true,
-        tenant: proto,
+        tenant: plain,
         isolation: {
           is_isolated_database: true,
-          database_name: proto.database.database_name,
-          provider: proto.database.provider,
-          schema_version: proto.database.schema_version,
-          status: proto.database.status,
-          host: proto.database.host_reference,
-          region: proto.database.region
+          database_name: dbInfo.database_name,
+          provider: dbInfo.provider,
+          schema_version: dbInfo.schema_version,
+          status: dbInfo.status,
+          host: dbInfo.host_reference,
+          region: dbInfo.region
         },
-        message: `Tenant resolved: ${proto.name} (Code: ${proto.college_code})`
+        message: `Tenant resolved: ${plain.name} (${plain.college_code})`
       });
     }
 
@@ -236,36 +90,16 @@ export async function resolveTenant(req: Request, res: Response) {
 // List all colleges available for login resolution
 export async function getResolvableColleges(req: Request, res: Response) {
   try {
-    let dbTenants: any[] = [];
-    try {
-      dbTenants = await Tenant.findAll({
-        attributes: ["id", "college_code", "name", "slug", "institution_type", "status"],
-        include: [{ model: TenantDatabase, as: "database", attributes: ["database_name", "schema_version", "status", "provider"] }],
-        limit: 50,
-      });
-    } catch {
-      // fallback
-    }
-
-    const merged = [...PROTOTYPE_TENANTS];
-    dbTenants.forEach((d) => {
-      const plain = d.get({ plain: true });
-      if (!merged.some((m) => m.college_code === plain.college_code)) {
-        merged.push({
-          ...plain,
-          database: plain.database || {
-            provider: "PostgreSQL 17",
-            database_name: `careeros_${plain.slug}`,
-            schema_version: "v28",
-            status: "ACTIVE",
-          },
-        });
-      }
+    const dbTenants = await Tenant.findAll({
+      attributes: ["id", "college_code", "name", "slug", "institution_type", "status"],
+      include: [{ model: TenantDatabase, as: "database", attributes: ["database_name", "schema_version", "status", "provider"] }],
+      order: [["name", "ASC"]],
+      limit: 100,
     });
 
     return res.status(200).json({
       success: true,
-      colleges: merged,
+      colleges: dbTenants.map((tenant) => tenant.get({ plain: true })),
     });
   } catch (err: any) {
     return res.status(500).json({
@@ -300,22 +134,12 @@ export async function getAllTenants(req: Request, res: Response) {
 
     const formatted = rows.map((r) => {
       const plain: any = r.get({ plain: true });
-      const db = plain.database || {
-        provider: 'PostgreSQL 17',
-        database_name: `careeros_${plain.slug}`,
-        schema_version: 'v28',
-        status: plain.status === 'ACTIVE' ? 'HEALTHY' : plain.status,
-      };
-      const sub = (plain.subscriptions && plain.subscriptions[0]) || { plan_code: 'Standard' };
+      const sub = plain.subscriptions?.[0];
 
       return {
         ...plain,
-        database: db,
-        plan_code: sub.plan_code || 'Standard',
-        user_count: plain.college_code === '4821' ? 3428 : plain.college_code === '7314' ? 2102 : plain.college_code === '9143' ? 1927 : 0,
-        storage_gb: plain.college_code === '4821' ? '18.7 GB' : plain.college_code === '7314' ? '42.2 GB' : '0.1 GB',
-        ai_usage_count: plain.college_code === '4821' ? '12.4k' : '0',
-        ai_cost_inr: plain.college_code === '4821' ? '₹18,420' : '₹0',
+        database: plain.database || null,
+        plan_code: sub?.plan_code || null,
       };
     });
 

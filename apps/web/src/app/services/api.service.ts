@@ -243,12 +243,17 @@ export class ApiService{
     }
 
 
-    getStudentResumes(): Observable<ResumeDocumentDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/resumes`).pipe(map(r => this.extractList<ResumeDocumentDto>(r.data)));
+    getStudentResumes(studentId?: string): Observable<ResumeDocumentDto[]> {
+        const params = studentId ? new HttpParams().set('student_id', studentId) : undefined;
+        return this.http.get<any>(`${this.baseUrl}/resumes`, { params }).pipe(
+          map(r => this.extractList<ResumeDocumentDto>(r.resumes ?? r.data))
+        );
     }
 
     getResumeVersions(resumeId: string): Observable<ResumeVersionDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/resumes/${resumeId}/versions`).pipe(map(r => this.extractList<ResumeVersionDto>(r.data)));
+        return this.http.get<any>(`${this.baseUrl}/resumes/${resumeId}/versions`).pipe(
+          map(r => this.extractList<ResumeVersionDto>(r.versions ?? r.data))
+        );
     }
 
 

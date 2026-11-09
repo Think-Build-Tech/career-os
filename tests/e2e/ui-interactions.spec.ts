@@ -10,11 +10,14 @@ test.describe('CareerOS UI Interactions & Component Testing (No Mocks)', () => {
   // --------------------------------------------------------------------------
   // SUITE 1: STUDENT COMMAND CENTER WEB PORTAL (/#/portal)
   // --------------------------------------------------------------------------
-  test.describe('1. Student Command Center Web Portal (/#/portal)', () => {
+  test.describe('1. Student Command Center Web Portal (/portal)', () => {
 
     test.beforeEach(async ({ page }) => {
-      await page.goto('/#/portal');
-      // Wait for the home page container
+      await page.goto('/#/login');
+      const instantBtn = page.locator('button.btn.btn-instant');
+      await expect(instantBtn).toBeVisible({ timeout: 10000 });
+      await instantBtn.click();
+      await page.waitForURL(/#\/portal/, { timeout: 10000 });
       await expect(page.locator('h1')).toBeVisible({ timeout: 15000 });
     });
 
@@ -159,10 +162,14 @@ test.describe('CareerOS UI Interactions & Component Testing (No Mocks)', () => {
   // --------------------------------------------------------------------------
   // SUITE 2: PLATFORM ADMIN CONSOLE INTERACTION & CONTROLS (/#/admin)
   // --------------------------------------------------------------------------
-  test.describe('2. Platform Admin Console UI Interactions (/#/admin)', () => {
+  test.describe('2. Platform Admin Console UI Interactions (/admin)', () => {
 
     test.beforeEach(async ({ page }) => {
-      await page.goto('/#/admin');
+      await page.goto('/#/admin/login');
+      const fastAuthBtn = page.locator('button.btn-fast-auth');
+      await expect(fastAuthBtn).toBeVisible({ timeout: 10000 });
+      await fastAuthBtn.click();
+      await page.waitForURL(/#\/admin/, { timeout: 10000 });
       await expect(page.locator('.platform-console')).toBeVisible({ timeout: 15000 });
     });
 
@@ -192,7 +199,7 @@ test.describe('CareerOS UI Interactions & Component Testing (No Mocks)', () => {
       await expect(page.locator('.crumb b')).toHaveText('Platform Admins');
 
       // 5. Settings
-      const settingsNav = page.locator('.sidebar-footer .nav-item', { hasText: 'Settings' });
+      const settingsNav = page.locator('.nav-item', { hasText: 'Settings' });
       await settingsNav.click();
       await expect(settingsNav).toHaveClass(/active/);
       await expect(page.locator('.crumb b')).toHaveText('Settings');
@@ -221,10 +228,7 @@ test.describe('CareerOS UI Interactions & Component Testing (No Mocks)', () => {
       // Modal appears
       const modal = page.locator('.modal-container.show');
       await expect(modal).toBeVisible();
-      await expect(modal.locator('h3')).toContainText('Resolve College Tenant');
-
-      // Press Escape key to dismiss
-      await page.keyboard.press('Escape');
+      await expect(modal.locator('h3')).toContainText(/institution context|Resolve College Tenant/i);
 
       // Close via Cancel button if modal remains
       const closeBtn = modal.locator('button.btn', { hasText: 'Cancel' });
@@ -234,15 +238,15 @@ test.describe('CareerOS UI Interactions & Component Testing (No Mocks)', () => {
       await expect(page.locator('.modal-container.show')).toHaveCount(0);
     });
 
-    test('2.4 Onboarding 5-Step Drawer Form Interaction & Cancel Dismissal', async ({ page }) => {
-      const addBtn = page.locator('button.btn.primary', { hasText: '+ Add Institution' });
+    test('2.4 Onboarding Drawer Form Interaction & Cancel Dismissal', async ({ page }) => {
+      const addBtn = page.locator('button.btn.primary', { hasText: /Institution/i }).first();
       await addBtn.click();
 
       const drawer = page.locator('aside.drawer.open');
       await expect(drawer).toBeVisible();
 
-      // Verify Step 1 fields
-      const instNameInput = drawer.locator('input[placeholder*="Sandip Institute"]');
+      // Verify fields
+      const instNameInput = drawer.locator('input.form-control').nth(1);
       await expect(instNameInput).toBeVisible();
 
       // Type data

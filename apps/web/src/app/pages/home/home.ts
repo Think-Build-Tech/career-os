@@ -1,10 +1,11 @@
 // src/app/pages/home/home.component.ts
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { forkJoin, of, catchError } from 'rxjs';
+import { finalize, forkJoin, of } from 'rxjs';
 import { AuthSessionService } from '../../core/auth/auth-session.service';
 import { ApiService } from '../../services/api.service';
 import { PortalStateService } from '../../services/portal-state.service';
+import { Sidebar } from '../sidebar/sidebar';
 import {
   StudentActionItemDto,
   PlacementComplianceDto,
@@ -17,12 +18,12 @@ import {
 @Component({
   selector: 'app-home-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, Sidebar],
   templateUrl: './home.html',
   styleUrl: './home.css'
 })
 export class HomeComponent {
-  private readonly auth = inject(AuthSessionService);
+  readonly auth = inject(AuthSessionService);
   private readonly api = inject(ApiService);
   readonly portal = inject(PortalStateService);
 
@@ -39,6 +40,8 @@ export class HomeComponent {
   readonly events = signal<AcademicEventDto[]>([]);
   readonly conflicts = signal<ConflictCheckResponse | null>(null);
   readonly priorityDrives = signal<JobOpportunityDto[]>([]);
+  readonly isLoading = signal(false);
+  readonly loadError = signal<string | null>(null);
 
   readonly firstName = computed(() =>
     this.portal.studentDisplayInfo().fullName.split(' ')[0] || 'Student'
@@ -61,12 +64,14 @@ export class HomeComponent {
 
   loadData(studentId: string): void {
     const deptId = this.auth.departmentId();
+    this.isLoading.set(true);
+    this.loadError.set(null);
     forkJoin({
-      actions: this.api.getStudentActionItems(studentId).pipe(catchError(() => of([]))),
-      compliance: this.api.getStudentCompliance(studentId).pipe(catchError(() => of(null))),
-      skillGap: this.api.analyzeSkillGap(studentId, 'Backend Engineer').pipe(catchError(() => of(null))),
-      events: this.api.getAcademicEvents().pipe(catchError(() => of([]))),
-      jobs: this.api.getJobOpportunities(1, 5).pipe(catchError(() => of([]))),
+      actions: this.api.getStudentActionItems(studentId),
+      compliance: this.api.getStudentCompliance(studentId),
+      skillGap: this.api.analyzeSkillGap(studentId, 'Backend Engineer'),
+      events: this.api.getAcademicEvents(),
+      jobs: this.api.getJobOpportunities(1, 5),
       conflicts: deptId
         ? this.api
             .detectTimetableConflicts({
@@ -74,17 +79,23 @@ export class HomeComponent {
               starts_at: new Date().toISOString(),
               ends_at: new Date(Date.now() + 7 * 86400000).toISOString()
             })
-            .pipe(catchError(() => of(null)))
         : of(null)
-    }).subscribe(({ actions, compliance, skillGap, events, jobs, conflicts }) => {
-      this.actions.set(actions);
-      this.portal.pendingSlaCount.set(actions.filter(a => !a.completed_at).length);
-      this.compliance.set(compliance);
-      this.skillGap.set(skillGap);
-      this.events.set(events.slice(0, 3));
-      this.priorityDrives.set(jobs.slice(0, 3));
-      this.conflicts.set(conflicts);
-    });
+    })
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: ({ actions, compliance, skillGap, events, jobs, conflicts }) => {
+          this.actions.set(actions);
+          this.portal.pendingSlaCount.set(actions.filter(a => !a.completed_at).length);
+          this.compliance.set(compliance);
+          this.skillGap.set(skillGap);
+          this.events.set(events.slice(0, 3));
+          this.priorityDrives.set(jobs.slice(0, 3));
+          this.conflicts.set(conflicts);
+        },
+        error: (error) => {
+          this.loadError.set(error?.error?.message || error?.message || 'The student dashboard API data could not be loaded.');
+        }
+      });
   }
 
   switchRoleBenchmark(key: string, roleName: string): void {
@@ -111,5 +122,9 @@ export class HomeComponent {
       case 'bad':  return 'bg-[#b42318]';
       default:     return 'bg-[#4a33e0]';
     }
+  }
+
+  logout(): void {
+    this.auth.clearSessionOnLogout();
   }
 }

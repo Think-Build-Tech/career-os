@@ -16,6 +16,7 @@ import {
   resolveTenant,
   getResolvableColleges,
 } from "./control.controller";
+import { requirePlatformAdmin } from "../auth/auth.middleware";
 
 export const controlRouter = Router();
 
@@ -24,6 +25,8 @@ controlRouter.get("/colleges", getResolvableColleges);
 controlRouter.get("/resolve/:codeOrSlug", resolveTenant);
 controlRouter.post("/resolve", resolveTenant);
 controlRouter.get("/tenants/resolve/:codeOrSlug", resolveTenant);
+
+controlRouter.use(requirePlatformAdmin);
 
 // Tenants
 controlRouter.get("/tenants", getAllTenants);

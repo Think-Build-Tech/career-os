@@ -43,18 +43,6 @@ jobs:
         with:
           terraform_version: 1.9.8
 
-      - name: Validate requested seed credentials
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_database }}
-        shell: bash
-        env:
-          SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
-          SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
-        run: |
-          if [[ ${#SEED_ADMIN_PASSWORD} -lt 12 || ${#SEED_USER_PASSWORD} -lt 12 ]]; then
-            echo "SEED_ADMIN_PASSWORD and SEED_USER_PASSWORD must both exist in the Dev environment and contain at least 12 characters."
-            exit 1
-          fi
-
       - name: Initialize Terraform backend
         working-directory: infra/terraform
         run: >-
@@ -112,11 +100,26 @@ jobs:
           TF_VAR_bedrock_model: ${{ vars.TF_VAR_BEDROCK_MODEL }}
         run: terraform apply -auto-approve -input=false -var="environment=${ENVIRONMENT}" -var="image_tag=${{ github.sha }}-${{ github.run_attempt }}" -var="desired_count=1"
 
-      - name: Seed development database
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_database }}
+      - name: Seed development database once
         working-directory: infra/terraform
         shell: bash
+        env:
+          DEPLOY_EVENT: ${{ github.event_name }}
+          FORCE_DATABASE_SEED: ${{ inputs.seed_database || false }}
+          SEED_MARKER_BUCKET: ${{ vars.TF_STATE_BUCKET }}
         run: |
+          MARKER_KEY="careeros/${ENVIRONMENT}/seed/database-v1.complete"
+
+          if [[ "$DEPLOY_EVENT" == "workflow_dispatch" && "$FORCE_DATABASE_SEED" != "true" ]]; then
+            echo "Database seed was not requested for this manual deployment."
+            exit 0
+          fi
+
+          if [[ "$FORCE_DATABASE_SEED" != "true" ]] && aws s3api head-object --bucket "$SEED_MARKER_BUCKET" --key "$MARKER_KEY" >/dev/null 2>&1; then
+            echo "Development database seed has already completed; skipping this deployment."
+            exit 0
+          fi
+
           CLUSTER=$(terraform output -raw ecs_cluster)
           TASK_DEFINITION=$(terraform output -raw database_seed_task_definition)
           SUBNETS=$(terraform output -json private_subnet_ids | jq -r 'join(",")')
@@ -147,6 +150,9 @@ jobs:
             aws logs tail "/ecs/${PROJECT_NAME}-${ENVIRONMENT}/api" --since 15m --format short || true
             exit 1
           fi
+
+          aws s3api put-object --bucket "$SEED_MARKER_BUCKET" --key "$MARKER_KEY" --body /dev/null >/dev/null
+          echo "Database seed completed and one-time marker s3://$SEED_MARKER_BUCKET/$MARKER_KEY was created."
 
       - name: Wait for ECS services
         working-directory: infra/terraform

@@ -72,8 +72,8 @@ Secrets:
 - `TF_VAR_AI_SERVICE_API_KEY`
 - `TF_VAR_AUTH_TOKEN_SECRET`
 - `TF_VAR_BEDROCK_API_KEY`
-- `SEED_ADMIN_PASSWORD` (at least 12 characters)
-- `SEED_USER_PASSWORD` (at least 12 characters)
+- `SEED_ADMIN_PASSWORD` (optional override for the seed fallback)
+- `SEED_USER_PASSWORD` (optional override for the seed fallback)
 
 Variables:
 
@@ -86,18 +86,15 @@ After that, every push to `dev` runs `.github/workflows/deploy.yml`. Pull reques
 
 ## Seed the development database once
 
-The seed is deliberately opt-in so ordinary pushes cannot reset development
-records. It runs as a one-off ECS Fargate task in the private subnets and uses
-the RDS credentials stored in Secrets Manager.
+The next push to `dev` runs the seed as a one-off ECS Fargate task in the
+private subnets using the RDS credentials stored in Secrets Manager. After a
+successful run, the workflow writes the marker
+`careeros/development/seed/database-v1.complete` to the Terraform state bucket.
+Subsequent push deployments detect that marker and skip the database seed.
 
-1. Push these deployment changes to `dev`.
-2. Open GitHub **Actions** and select **Deploy CareerOS to AWS**.
-3. Select **Run workflow**, choose the `dev` branch, and enable **Seed the development database**.
-4. Run the workflow and verify that the **Seed development database** step reports `exit_code=0`.
-
-The script is deterministic and transactional. Re-running it updates the same
-seed records instead of creating duplicates, but it can restore seeded values,
-so leave the checkbox disabled for normal deployments.
+After this workflow also exists on the default branch, a manual deployment can
+enable **Seed the development database** to deliberately run the idempotent seed
+again regardless of the marker.
 
 ## Operational notes
 

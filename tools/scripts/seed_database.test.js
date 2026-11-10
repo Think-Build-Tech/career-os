@@ -18,6 +18,7 @@ test('makes the pg_dump schema safe to apply after control-plane bootstrap', () 
   assert.ok(originalConstraintCount > 0, 'the fixture should contain pg_dump constraints');
   assert.equal(guardedConstraintCount, originalConstraintCount);
   assert.doesNotMatch(transformed, /^SET transaction_timeout/m);
+  assert.doesNotMatch(transformed, /set_config\('search_path', '', false\)/);
   assert.doesNotMatch(transformed, /^CREATE TABLE public\./m);
   assert.doesNotMatch(transformed, /^CREATE (?:UNIQUE )?INDEX (?!IF NOT EXISTS )/m);
   assert.doesNotMatch(transformed, /^ALTER TABLE ONLY public\./m);

@@ -56,7 +56,7 @@ async function upsert(client, table, row, conflictColumn = 'id') {
   const columns = Object.keys(row);
   const updateColumns = columns.filter((column) => column !== conflictColumn && column !== 'created_at');
   const sql = `
-    INSERT INTO ${assertIdentifier(table)} (${columns.map(assertIdentifier).join(', ')})
+    INSERT INTO public.${assertIdentifier(table)} (${columns.map(assertIdentifier).join(', ')})
     VALUES (${columns.map((_, index) => `$${index + 1}`).join(', ')})
     ON CONFLICT (${assertIdentifier(conflictColumn)}) DO UPDATE SET
       ${updateColumns.map((column) => `${assertIdentifier(column)} = EXCLUDED.${assertIdentifier(column)}`).join(', ')};
@@ -103,6 +103,11 @@ function makeSchemaIdempotent(schemaSql) {
     // schema.sql was dumped by PostgreSQL 17, while Terraform provisions
     // PostgreSQL 16. This setting does not exist on the deployed engine.
     .replace(/^SET transaction_timeout = 0;\r?\n/gm, '')
+    // pg_dump clears the session search_path because its own statements are
+    // schema-qualified. The seed queries intentionally use quoted, unqualified
+    // table names, so retaining that setting makes `"tenants"` unresolvable
+    // immediately after a successful schema application.
+    .replace(/^SELECT pg_catalog\.set_config\('search_path', '', false\);\r?\n/gm, '')
     .replace(/^CREATE TABLE public\./gm, 'CREATE TABLE IF NOT EXISTS public.')
     .replace(/^CREATE (UNIQUE )?INDEX (?!IF NOT EXISTS )/gm, 'CREATE $1INDEX IF NOT EXISTS ')
     .replace(
@@ -121,6 +126,7 @@ async function ensureSchema(client) {
   }
   console.log(`[seed] Completing database schema in ${DB_NAME}; ${missing.length} required tables are missing...`);
   await client.query(makeSchemaIdempotent(loadSchemaSql()));
+  console.log('[seed] Database schema completion succeeded.');
 }
 
 async function verifyRequiredTables(client) {
@@ -625,7 +631,7 @@ async function verifySeed(client) {
   const results = [];
   for (const check of checks) {
     const { rows } = await client.query(
-      `SELECT count(*)::int AS count FROM ${assertIdentifier(check.table)} WHERE id = ANY($1::uuid[])`,
+      `SELECT count(*)::int AS count FROM public.${assertIdentifier(check.table)} WHERE id = ANY($1::uuid[])`,
       [check.ids],
     );
     const actual = rows[0].count;
@@ -660,7 +666,9 @@ async function main() {
   try {
     console.log(`[seed] Connecting to ${DB_HOST}:${DB_PORT}/${DB_NAME} as ${DB_USER}...`);
     await client.connect();
+    await client.query('SET search_path TO pg_catalog, public');
     await ensureSchema(client);
+    await client.query('SET search_path TO pg_catalog, public');
     await verifyRequiredTables(client);
     await client.query('BEGIN');
     await client.query("SELECT pg_advisory_xact_lock(hashtext('careeros-deterministic-seed-v1'))");

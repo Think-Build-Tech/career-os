@@ -41,17 +41,6 @@ export class AdminLoginComponent {
     });
   }
 
-  fastDevLogin(): void {
-    this.isAuthenticating = true;
-    this.errorMessage = '';
-    this.authApi.loginAdmin('super.admin@careeros.com', 'Admin@CareerOS2026!').subscribe({
-      next: (session) => this.finishAuthentication(session),
-      error: () => {
-        this.auth.loginAsAdmin();
-      },
-    });
-  }
-
   bootstrapAdmin(): void {
     this.isAuthenticating = true;
     this.errorMessage = '';

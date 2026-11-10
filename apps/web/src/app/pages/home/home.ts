@@ -16,6 +16,7 @@ import {
   ConflictCheckResponse,
   JobOpportunityDto,
   StudentApplicationDto,
+  PlacementOfferDto,
   AssessmentDto,
   AssessmentBadgeDto,
   LearningPostDto,
@@ -58,6 +59,7 @@ export class HomeComponent {
 
   // Extended Portal Signals for All Sidebar Pages
   readonly applications = signal<StudentApplicationDto[]>([]);
+  readonly offers = signal<PlacementOfferDto[]>([]);
   readonly assessments = signal<AssessmentDto[]>([]);
   readonly badges = signal<AssessmentBadgeDto[]>([]);
   readonly learningPosts = signal<LearningPostDto[]>([]);
@@ -103,7 +105,8 @@ export class HomeComponent {
       skillGap: this.api.analyzeSkillGap(studentId, 'Backend Engineer').pipe(catchError(() => of(null))),
       events: this.api.getAcademicEvents().pipe(catchError(() => of([]))),
       jobs: this.api.getJobOpportunities(1, 10).pipe(catchError(() => of([]))),
-      applications: this.api.getPlacementDrives().pipe(catchError(() => of([]))),
+      applications: this.api.getStudentApplications(studentId).pipe(catchError(() => of([]))),
+      offers: this.api.getStudentOffers(studentId).pipe(catchError(() => of([]))),
       assessments: this.api.getAssessments().pipe(catchError(() => of([]))),
       badges: this.api.getEarnedAssessmentBadges().pipe(catchError(() => of([]))),
       learning: this.api.getLearningPosts().pipe(catchError(() => of([]))),
@@ -135,6 +138,7 @@ export class HomeComponent {
           this.conflicts.set(data.conflicts);
 
           this.applications.set(data.applications);
+          this.offers.set(data.offers);
           this.assessments.set(data.assessments);
           this.badges.set(data.badges);
           this.learningPosts.set(data.learning);

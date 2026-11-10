@@ -67,25 +67,6 @@ export class CollegeLoginComponent implements OnInit {
     this.resolveCollege(college.college_code);
   }
 
-  loginAsDemoStudent(): void {
-    const resolved = this.resolvedTenant();
-    const collegeCode = resolved?.tenant?.college_code || this.collegeCode() || '4821';
-    this.isLoggingIn = true;
-    this.loginError = '';
-
-    this.authApi.loginStudent(collegeCode, 'aarav.sharma@sitrc.ac.in', 'Student@Pass123!').subscribe({
-      next: (session) => {
-        this.isLoggingIn = false;
-        this.auth.setSessionOnLogin(session);
-        this.router.navigate(['/portal']);
-      },
-      error: () => {
-        this.isLoggingIn = false;
-        this.auth.loginAsCollegeStudent(collegeCode, 'aarav.sharma@sitrc.ac.in');
-      },
-    });
-  }
-
   onSubmitLogin(): void {
     const resolved = this.resolvedTenant();
     if (!resolved?.tenant) {

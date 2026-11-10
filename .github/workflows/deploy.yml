@@ -147,7 +147,15 @@ jobs:
 
           if [[ "$EXIT_CODE" != "0" ]]; then
             aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --output json
-            aws logs tail "/ecs/${PROJECT_NAME}-${ENVIRONMENT}/api" --since 15m --format short || true
+            TASK_ID="${TASK_ARN##*/}"
+            SEED_LOG_STREAM="seed/database-seed/${TASK_ID}"
+            echo "===== Database seed container log: ${SEED_LOG_STREAM} ====="
+            aws logs get-log-events \
+              --log-group-name "/ecs/${PROJECT_NAME}-${ENVIRONMENT}/api" \
+              --log-stream-name "$SEED_LOG_STREAM" \
+              --start-from-head \
+              --query 'events[].message' \
+              --output text || aws logs tail "/ecs/${PROJECT_NAME}-${ENVIRONMENT}/api" --since 15m --format short || true
             exit 1
           fi
 

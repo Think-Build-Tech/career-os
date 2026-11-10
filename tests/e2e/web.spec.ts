@@ -22,6 +22,9 @@ test.describe('CareerOS Web Application E2E Tests (Live DB & Full Role Separatio
     // Verify discrete super-admin login link is present
     const adminLink = page.locator('a[routerLink="/admin/login"]');
     await expect(adminLink.first()).toBeVisible();
+
+    // Authentication shortcuts must never be exposed on either login page.
+    await expect(page.getByText(/1-Click Sign In/i)).toHaveCount(0);
   });
 
   test('2. College Tenant Resolution: Live Database Isolation Status Cards', async ({ page }) => {
@@ -64,10 +67,10 @@ test.describe('CareerOS Web Application E2E Tests (Live DB & Full Role Separatio
   test('4. Super Admin Login & Live Console Navigation', async ({ page }) => {
     await page.goto('/#/admin/login');
 
-    // Click 1-Click Fast Dev Authentication as Super Admin
-    const fastAuthBtn = page.locator('button.btn-fast-auth');
-    await expect(fastAuthBtn).toBeVisible({ timeout: 10000 });
-    await fastAuthBtn.click();
+    await expect(page.getByText(/1-Click Fast Dev Authentication/i)).toHaveCount(0);
+    await page.getByLabel('Platform Administrator Email').fill('super.admin@careeros.com');
+    await page.getByLabel('Password').fill('Admin@CareerOS2026!');
+    await page.getByRole('button', { name: /Authenticate & Launch Console/i }).click();
 
     // Console is unlocked and navigates to /#/admin
     await page.waitForURL(/#\/admin/, { timeout: 10000 });
@@ -115,10 +118,11 @@ test.describe('CareerOS Web Application E2E Tests (Live DB & Full Role Separatio
   test('5. Student Portal Workflow: Login, Command Center, Priority SLA & Jobs', async ({ page }) => {
     await page.goto('/#/login');
 
-    // Sign in as student Aarav Sharma
-    const studentLoginBtn = page.locator('button.btn.btn-instant');
-    await expect(studentLoginBtn).toBeVisible({ timeout: 10000 });
-    await studentLoginBtn.click();
+    await page.locator('.college-chip', { hasText: '4821' }).click();
+    await expect(page.locator('.isolation-card')).toBeVisible({ timeout: 10000 });
+    await page.getByLabel('Registered student email').fill('aarav.sharma@sitrc.ac.in');
+    await page.getByLabel('Password / Student PIN').fill('Student@Pass123!');
+    await page.getByRole('button', { name: /Sign In to Placement Command Center/i }).click();
 
     // Redirects to /#/portal
     await page.waitForURL(/#\/portal/, { timeout: 10000 });

@@ -84,50 +84,6 @@ export class AuthSessionService {
     this.sessionSignal.set(updated);
   }
 
-  loginAsCollegeStudent(collegeCode = '4821', studentEmail = 'aarav.sharma@sitrc.ac.in'): void {
-    const current = this.sessionSignal();
-    const studentSession: AuthenticatedSession = {
-      isLoggedIn: true,
-      accessToken: 'dev-student-token-aarav',
-      tenantId: current?.tenantId || '00000000-0000-0000-0000-000000000001',
-      userId: 'fa100000-0000-0000-0000-000000000002',
-      studentId: 'fa200000-0000-0000-0000-000000000002',
-      collegeCode: collegeCode || current?.collegeCode || '4821',
-      institutionName: current?.institutionName || 'Sandip Institute of Technology & Research Centre (SITRC)',
-      institutionSlug: current?.institutionSlug || 'sitrc',
-      databaseName: current?.databaseName || 'careeros_sitrc',
-      schemaVersion: current?.schemaVersion || 'v28',
-      databaseProvider: current?.databaseProvider || 'PostgreSQL 17',
-      roleCode: 'STUDENT',
-      userEmail: studentEmail,
-      userName: 'Aarav Sharma',
-    };
-    this.setSessionOnLogin(studentSession);
-    this.router.navigate(['/portal']);
-  }
-
-  loginAsAdmin(adminEmail = 'super.admin@careeros.com'): void {
-    const current = this.sessionSignal();
-    const adminSession: AuthenticatedSession = {
-      isLoggedIn: true,
-      accessToken: 'dev-super-admin-token',
-      tenantId: current?.tenantId || '00000000-0000-0000-0000-000000000001',
-      userId: 'fa100000-0000-0000-0000-000000000001',
-      studentId: '',
-      collegeCode: current?.collegeCode || '4821',
-      institutionName: current?.institutionName || 'Sandip Institute of Technology & Research Centre (SITRC)',
-      institutionSlug: current?.institutionSlug || 'sitrc',
-      databaseName: current?.databaseName || 'careeros_sitrc',
-      schemaVersion: current?.schemaVersion || 'v28',
-      databaseProvider: current?.databaseProvider || 'PostgreSQL 17',
-      roleCode: 'SUPER_ADMIN',
-      userEmail: adminEmail || 'super.admin@careeros.com',
-      userName: 'Platform Super Admin',
-    };
-    this.setSessionOnLogin(adminSession);
-    this.router.navigate(['/admin']);
-  }
-
   clearSessionOnLogout(): void {
     localStorage.removeItem(SESSION_STORAGE_KEY);
     this.sessionSignal.set(null);

@@ -18,6 +18,14 @@ const SEED_USER_PASSWORD = process.env.SEED_USER_PASSWORD || process.env.SEED_PA
 const APPLY_SCHEMA = process.env.SEED_APPLY_SCHEMA !== 'false';
 const CONFIRMED_DB = process.env.SEED_CONFIRM_DB;
 
+const REQUIRED_TABLES = [
+  'tenants', 'tenant_databases', 'subscriptions', 'global_users', 'platform_admins', 'institutions',
+  'departments', 'programs', 'cohorts', 'users', 'tenant_memberships', 'student_profiles',
+  'student_academic_records', 'student_career_profiles', 'companies', 'job_opportunities', 'resumes',
+  'resume_versions', 'job_applications', 'assessments', 'skills', 'ai_runs', 'conversations',
+  'notifications', 'student_projects', 'alumni_profiles', 'learning_posts', 'audit_logs',
+];
+
 const CREATED_AT = '2026-07-01T09:00:00.000Z';
 const UPDATED_AT = '2026-11-09T09:00:00.000Z';
 
@@ -64,36 +72,59 @@ function timestamps(values, createdAt = CREATED_AT) {
   return { ...values, created_at: createdAt, updated_at: UPDATED_AT };
 }
 
-async function ensureSchema(client) {
-  const { rows } = await client.query("SELECT to_regclass('public.tenants') AS tenants");
-  if (rows[0].tenants) return;
-  if (!APPLY_SCHEMA) {
-    throw new Error('Database schema is missing and SEED_APPLY_SCHEMA=false. Start the API once or enable schema application.');
-  }
+async function findMissingRequiredTables(client) {
+  const { rows } = await client.query(
+    `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ANY($1::text[])`,
+    [REQUIRED_TABLES],
+  );
+  const found = new Set(rows.map((row) => row.table_name));
+  return REQUIRED_TABLES.filter((table) => !found.has(table));
+}
+
+function loadSchemaSql() {
   const schemaPath = [
     path.resolve(process.cwd(), 'apps/api/src/app/config/schema.sql'),
     path.resolve(process.cwd(), 'schema.sql'),
     '/app/schema.sql',
   ].find((candidate) => fs.existsSync(candidate));
   if (!schemaPath) throw new Error('Schema file not found in the workspace or API container.');
-  console.log(`[seed] Applying schema to empty database ${DB_NAME}...`);
-  await client.query(fs.readFileSync(schemaPath, 'utf8'));
+  return fs.readFileSync(schemaPath, 'utf8');
+}
+
+/**
+ * schema.sql is a pg_dump-style schema snapshot. The API may already have
+ * created its control-plane tables before this one-off seed task runs, so the
+ * snapshot must be made repeatable before it is applied. Existing tables and
+ * indexes are retained; missing domain objects are added.
+ */
+function makeSchemaIdempotent(schemaSql) {
+  if (schemaSql.includes('DO $careeros$')) return schemaSql;
+  return schemaSql
+    // schema.sql was dumped by PostgreSQL 17, while Terraform provisions
+    // PostgreSQL 16. This setting does not exist on the deployed engine.
+    .replace(/^SET transaction_timeout = 0;\r?\n/gm, '')
+    .replace(/^CREATE TABLE public\./gm, 'CREATE TABLE IF NOT EXISTS public.')
+    .replace(/^CREATE (UNIQUE )?INDEX (?!IF NOT EXISTS )/gm, 'CREATE $1INDEX IF NOT EXISTS ')
+    .replace(
+      /ALTER TABLE ONLY public\.([a-z_][a-z0-9_]*)\s+ADD CONSTRAINT ([a-z_][a-z0-9_]*)\s+([\s\S]*?);/g,
+      (_statement, tableName, constraintName, definition) => `DO $careeros$\nBEGIN\n  IF NOT EXISTS (\n    SELECT 1\n    FROM pg_catalog.pg_constraint\n    WHERE conname = '${constraintName}'\n      AND conrelid = 'public.${tableName}'::regclass\n  ) THEN\n    ALTER TABLE ONLY public.${tableName}\n      ADD CONSTRAINT ${constraintName} ${definition.trim()};\n  END IF;\nEND\n$careeros$;`,
+    );
+}
+
+async function ensureSchema(client) {
+  const missing = await findMissingRequiredTables(client);
+  if (!missing.length) return;
+  if (!APPLY_SCHEMA) {
+    throw new Error(
+      `Database schema is incomplete and SEED_APPLY_SCHEMA=false. Missing tables: ${missing.join(', ')}`,
+    );
+  }
+  console.log(`[seed] Completing database schema in ${DB_NAME}; ${missing.length} required tables are missing...`);
+  await client.query(makeSchemaIdempotent(loadSchemaSql()));
 }
 
 async function verifyRequiredTables(client) {
-  const required = [
-    'tenants', 'tenant_databases', 'subscriptions', 'global_users', 'platform_admins', 'institutions',
-    'departments', 'programs', 'cohorts', 'users', 'tenant_memberships', 'student_profiles',
-    'student_academic_records', 'student_career_profiles', 'companies', 'job_opportunities', 'resumes',
-    'resume_versions', 'job_applications', 'assessments', 'skills', 'ai_runs', 'conversations',
-    'notifications', 'student_projects', 'alumni_profiles', 'learning_posts', 'audit_logs',
-  ];
-  const { rows } = await client.query(
-    `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ANY($1::text[])`,
-    [required],
-  );
-  const found = new Set(rows.map((row) => row.table_name));
-  const missing = required.filter((table) => !found.has(table));
+  const missing = await findMissingRequiredTables(client);
   if (missing.length) throw new Error(`Database schema is incomplete. Missing tables: ${missing.join(', ')}`);
 }
 
@@ -651,7 +682,14 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(`[seed] ${error.message}`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(`[seed] ${error.message}`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  makeSchemaIdempotent,
+  findMissingRequiredTables,
+};

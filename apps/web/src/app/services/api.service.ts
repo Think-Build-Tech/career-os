@@ -50,11 +50,38 @@ export class ApiService{
     private readonly http = inject(HttpClient);
     private readonly baseUrl = environment.apiUrl;
 
-    private extractList<T>(data: any): T[]{
-        if(Array.isArray(data)) return data;
-        if(data && Array.isArray(data.items)) return data.items;
-        if(data && Array.isArray(data.rows)) return data.rows;
+    private extractList<T>(payload: any): T[]{
+        if(Array.isArray(payload)) return payload;
+        if(!payload || typeof payload !== 'object') return [];
+
+        // The API has both the standard `data` envelope and legacy named
+        // collections (`opportunities`, `assessments`, `profiles`, etc.).
+        // Walk the envelope so a successful response is never rendered as an
+        // empty UI merely because the collection key differs.
+        const preferredKeys = [
+          'data', 'items', 'rows', 'records', 'events', 'institutions',
+          'opportunities', 'drives', 'applications', 'offers', 'assessments',
+          'badges', 'profiles', 'posts', 'conversations', 'messages', 'skills',
+          'resumes', 'versions', 'projects', 'notifications', 'savedItems',
+          'transactions', 'logs', 'actionItems'
+        ];
+        for (const key of preferredKeys) {
+          const value = payload[key];
+          if (Array.isArray(value)) return value;
+          if (value && typeof value === 'object') {
+            const nested = this.extractList<T>(value);
+            if (nested.length > 0) return nested;
+          }
+        }
         return [];
+    }
+
+    private extractEntity<T>(payload: any, ...keys: string[]): T {
+        if (payload?.data !== undefined) return payload.data as T;
+        for (const key of keys) {
+          if (payload?.[key] !== undefined) return payload[key] as T;
+        }
+        return payload as T;
     }
 
     getUserById(userId: string): Observable<UserDto>{
@@ -98,20 +125,31 @@ export class ApiService{
 
     getAcademicRecords(page = 1, limit = 20): Observable<AcademicRecordDto[]> {
         const params = new HttpParams().set('page', page).set('limit', limit);
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/academic/records`, { params }).pipe(map(r => this.extractList<AcademicRecordDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/academic/records`, { params }).pipe(map(r => this.extractList<AcademicRecordDto>(r)));
     }
 
     getAcademicEvents(): Observable<AcademicEventDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/academic/events`).pipe(map(r => this.extractList<AcademicEventDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/academic/events`).pipe(map(r => this.extractList<AcademicEventDto>(r)));
     }
 
     detectTimetableConflicts(payload: ConflictCheckRequest): Observable<ConflictCheckResponse> {
-        return this.http.post<ApiResponse<ConflictCheckResponse>>(`${this.baseUrl}/academic/events/conflicts`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<ConflictCheckResponse>>(`${this.baseUrl}/academic/events/conflicts`, payload).pipe(
+          map(r => {
+            const result = this.extractEntity<any>(r, 'conflicts', 'result');
+            return Array.isArray(result)
+              ? {
+                  has_conflict: result.length > 0,
+                  conflicting_events: result,
+                  summary_message: result.length > 0 ? `${result.length} timetable conflict(s) found.` : 'No timetable conflicts found.'
+                }
+              : result as ConflictCheckResponse;
+          })
+        );
     }
 
     getInstitutions(page = 1, limit = 20): Observable<InstitutionDto[]> {
         const params = new HttpParams().set('page', page).set('limit', limit);
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/institutions`, { params }).pipe(map(r => this.extractList<InstitutionDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/institutions`, { params }).pipe(map(r => this.extractList<InstitutionDto>(r)));
     }
 
 
@@ -119,23 +157,37 @@ export class ApiService{
 
     getJobOpportunities(page = 1, limit = 50): Observable<JobOpportunityDto[]> {
         const params = new HttpParams().set('page', page).set('limit', limit);
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/placements/opportunities`, { params }).pipe(map(r => this.extractList<JobOpportunityDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/placements/opportunities`, { params }).pipe(
+          map(r => this.extractList<any>(r).map(job => ({
+            ...job,
+            company_name: job.company_name ?? job.company?.name,
+            job_type: job.job_type ?? job.employment_type,
+            base_salary: Number(job.base_salary ?? job.compensation_min ?? 0),
+            total_ctc: Number(job.total_ctc ?? job.compensation_max ?? job.compensation_min ?? 0)
+          } as JobOpportunityDto)))
+        );
     }
 
-    getPlacementDrives(): Observable<StudentApplicationDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/placements/drives`).pipe(map(r => this.extractList<StudentApplicationDto>(r.data)));
+    getStudentApplications(studentId: string): Observable<StudentApplicationDto[]> {
+        const params = new HttpParams().set('student_id', studentId);
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/placements/applications`, { params }).pipe(map(r => this.extractList<StudentApplicationDto>(r)));
+    }
+
+    getStudentOffers(studentId: string): Observable<PlacementOfferDto[]> {
+        const params = new HttpParams().set('student_id', studentId);
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/placements/offers`, { params }).pipe(map(r => this.extractList<PlacementOfferDto>(r)));
     }
 
     applyForJob(payload: SubmitApplicationRequest): Observable<any> {
-        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/placements/apply`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/placements/apply`, payload).pipe(map(r => this.extractEntity(r, 'application')));
     }
 
     acceptJobOffer(offerId: string, payload: AcceptOfferRequest): Observable<any> {
-        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/placements/offers/${offerId}/accept`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/placements/offers/${offerId}/accept`, payload).pipe(map(r => this.extractEntity(r, 'offer')));
     }
 
     getStudentCompliance(studentId: string): Observable<PlacementComplianceDto> {
-        return this.http.get<ApiResponse<PlacementComplianceDto>>(`${this.baseUrl}/placements/compliance/${studentId}`).pipe(map(r => r.data));
+        return this.http.get<ApiResponse<PlacementComplianceDto>>(`${this.baseUrl}/placements/compliance/${studentId}`).pipe(map(r => this.extractEntity<PlacementComplianceDto>(r, 'compliance')));
     }
 
 
@@ -177,19 +229,19 @@ export class ApiService{
 
     getAssessments(page = 1, limit = 20): Observable<AssessmentDto[]> {
         const params = new HttpParams().set('page', page).set('limit', limit);
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/assessments`, { params }).pipe(map(r => this.extractList<AssessmentDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/assessments`, { params }).pipe(map(r => this.extractList<AssessmentDto>(r)));
     }
 
     bookAssessmentSlot(slot_id: string, student_id: string): Observable<any> {
-        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/assessments/slots/book`, { slot_id, student_id }).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/assessments/slots/book`, { slot_id, student_id }).pipe(map(r => this.extractEntity(r, 'booking')));
     }
 
     submitProctorPreflight(payload: ProctorPreflightRequest): Observable<any> {
-        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/assessments/preflight`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/assessments/preflight`, payload).pipe(map(r => this.extractEntity(r, 'preflight')));
     }
 
     getEarnedAssessmentBadges(): Observable<AssessmentBadgeDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/assessments/badges`).pipe(map(r => this.extractList<AssessmentBadgeDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/assessments/badges`).pipe(map(r => this.extractList<AssessmentBadgeDto>(r)));
     }
 
 
@@ -200,19 +252,19 @@ export class ApiService{
 
     getAlumniProfiles(page = 1, limit = 20): Observable<AlumniProfileDto[]> {
         const params = new HttpParams().set('page', page).set('limit', limit);
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/alumni/profiles`, { params }).pipe(map(r => this.extractList<AlumniProfileDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/alumni/profiles`, { params }).pipe(map(r => this.extractList<AlumniProfileDto>(r)));
     }
 
     getAlumniReferrals(): Observable<ReferralPostDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/alumni/referrals`).pipe(map(r => this.extractList<ReferralPostDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/alumni/referrals`).pipe(map(r => this.extractList<ReferralPostDto>(r)));
     }
 
     requestAlumniReferral(payload: RequestReferralDto): Observable<any> {
-        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/alumni/referrals/request`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/alumni/referrals/request`, payload).pipe(map(r => this.extractEntity(r, 'referralRequest')));
     }
 
     bookMentorshipSlot(payload: BookMentorshipRequest): Observable<any> {
-        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/alumni/mentorship/book`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/alumni/mentorship/book`, payload).pipe(map(r => this.extractEntity(r, 'booking')));
     }
 
 
@@ -222,24 +274,24 @@ export class ApiService{
 
 
     getConversations(): Observable<ConversationDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/chat/conversations`).pipe(map(r => this.extractList<ConversationDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/chat/conversations`).pipe(map(r => this.extractList<ConversationDto>(r)));
     }
 
     createConversation(payload: { conversation_type: ConversationDto['conversation_type']; title: string; participant_ids: string[] }): Observable<ConversationDto> {
-        return this.http.post<ApiResponse<ConversationDto>>(`${this.baseUrl}/chat/conversations`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<ConversationDto>>(`${this.baseUrl}/chat/conversations`, payload).pipe(map(r => this.extractEntity<ConversationDto>(r, 'conversation')));
     }
 
     getMessagesInConversation(conversationId: string): Observable<ChatMessageDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/chat/conversations/${conversationId}/messages`).pipe(map(r => this.extractList<ChatMessageDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/chat/conversations/${conversationId}/messages`).pipe(map(r => this.extractList<ChatMessageDto>(r)));
     }
 
     sendMessage(payload: { conversation_id: string; sender_id: string; content: string }): Observable<ChatMessageDto> {
-        return this.http.post<ApiResponse<ChatMessageDto>>(`${this.baseUrl}/chat/messages`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<ChatMessageDto>>(`${this.baseUrl}/chat/messages`, payload).pipe(map(r => this.extractEntity<ChatMessageDto>(r, 'message')));
     }
 
 
     getStudentSkillProfile(studentId: string): Observable<StudentSkillItemDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/skills/student/${studentId}`).pipe(map(r => this.extractList<StudentSkillItemDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/skills/student/${studentId}`).pipe(map(r => this.extractList<StudentSkillItemDto>(r)));
     }
 
 
@@ -261,11 +313,11 @@ export class ApiService{
 
     getStudentProjects(page = 1, limit = 20): Observable<StudentProjectDto[]> {
         const params = new HttpParams().set('page', page).set('limit', limit);
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/projects`, { params }).pipe(map(r => this.extractList<StudentProjectDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/projects`, { params }).pipe(map(r => this.extractList<StudentProjectDto>(r)));
     }
 
     createStudentProject(payload: Omit<StudentProjectDto, 'id'>): Observable<StudentProjectDto> {
-        return this.http.post<ApiResponse<StudentProjectDto>>(`${this.baseUrl}/projects`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<StudentProjectDto>>(`${this.baseUrl}/projects`, payload).pipe(map(r => this.extractEntity<StudentProjectDto>(r, 'project')));
     }
 
 
@@ -273,44 +325,54 @@ export class ApiService{
 
 
     getNotifications(): Observable<NotificationDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/notifications`).pipe(map(r => this.extractList<NotificationDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/notifications`).pipe(map(r => this.extractList<NotificationDto>(r)));
     }
 
     markNotificationAsRead(notificationId: string): Observable<NotificationDto> {
-        return this.http.patch<ApiResponse<NotificationDto>>(`${this.baseUrl}/notifications/${notificationId}/read`, {}).pipe(map(r => r.data));
+        return this.http.patch<ApiResponse<NotificationDto>>(`${this.baseUrl}/notifications/${notificationId}/read`, {}).pipe(map(r => this.extractEntity<NotificationDto>(r, 'notification')));
     }
 
     // 22. Learning Marketplace & Bookmarks
     getLearningPosts(page = 1, limit = 20): Observable<LearningPostDto[]> {
         const params = new HttpParams().set('page', page).set('limit', limit);
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/learning/posts`, { params }).pipe(map(r => this.extractList<LearningPostDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/learning/posts`, { params }).pipe(map(r => this.extractList<LearningPostDto>(r)));
     }
 
     createLearningPost(payload: { author_id: string; title: string; content: string; category: string }): Observable<LearningPostDto> {
-        return this.http.post<ApiResponse<LearningPostDto>>(`${this.baseUrl}/learning/posts`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<LearningPostDto>>(`${this.baseUrl}/learning/posts`, {
+          author_user_id: payload.author_id,
+          title: payload.title,
+          content: payload.content,
+          content_type: payload.category,
+          scope_type: 'INSTITUTION'
+        }).pipe(map(r => this.extractEntity<LearningPostDto>(r, 'post')));
     }
 
     toggleSavedItem(payload: { user_id: string; item_type: SavedItemDto['item_type']; item_id: string }): Observable<any> {
-        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/learning/saves/toggle`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/learning/saves/toggle`, {
+          userId: payload.user_id,
+          itemType: payload.item_type,
+          itemId: payload.item_id
+        }).pipe(map(r => this.extractEntity(r, 'item')));
     }
 
     getSavedItems(userId: string): Observable<SavedItemDto[]> {
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/learning/saves/${userId}`).pipe(map(r => this.extractList<SavedItemDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/learning/saves/${userId}`).pipe(map(r => this.extractList<SavedItemDto>(r)));
     }
 
     // 24. Reputation & 25. Rewards
     getStudentReputationSummary(studentId: string): Observable<ReputationSummaryDto> {
-        return this.http.get<ApiResponse<ReputationSummaryDto>>(`${this.baseUrl}/reputation/summaries/student/${studentId}`).pipe(map(r => r.data));
+        return this.http.get<ApiResponse<ReputationSummaryDto>>(`${this.baseUrl}/reputation/summaries/student/${studentId}`).pipe(map(r => this.extractEntity<ReputationSummaryDto>(r, 'summary')));
     }
 
     getRewardTransactions(page = 1, limit = 20): Observable<RewardTransactionDto[]> {
         const params = new HttpParams().set('page', page).set('limit', limit);
-        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/rewards`, { params }).pipe(map(r => this.extractList<RewardTransactionDto>(r.data)));
+        return this.http.get<ApiResponse<any>>(`${this.baseUrl}/rewards`, { params }).pipe(map(r => this.extractList<RewardTransactionDto>(r)));
     }
 
     // 28. Audit & Access Logs
     getStudentAuditLogs(student_id: string): Observable<DataAccessAuditLogDto[]> {
-        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/audit/student-logs`, { student_id }).pipe(map(r => this.extractList<DataAccessAuditLogDto>(r.data)));
+        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/audit/student-logs`, { student_id }).pipe(map(r => this.extractList<DataAccessAuditLogDto>(r)));
     }
 
     logProtectedResourceAccess(payload: {
@@ -321,6 +383,6 @@ export class ApiService{
         access_type: 'VIEW' | 'DOWNLOAD';
         purpose: string;
     }): Observable<any> {
-        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/audit/log-access`, payload).pipe(map(r => r.data));
+        return this.http.post<ApiResponse<any>>(`${this.baseUrl}/audit/log-access`, payload).pipe(map(r => this.extractEntity(r, 'log')));
     }
 }

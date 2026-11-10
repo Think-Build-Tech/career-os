@@ -48,6 +48,7 @@
           <div class="input-with-icon">
             <span class="input-icon">🏛</span>
             <input
+              id="college-code"
               type="text"
               class="form-input"
               placeholder="Enter college code or slug"
@@ -97,20 +98,11 @@
       <section class="section-box student-signin-box">
         <label class="section-label">2. STUDENT CREDENTIALS</label>
 
-        <!-- 1-Click Instant Sign In -->
-        <button
-          type="button"
-          class="btn btn-instant"
-          [disabled]="isLoggingIn"
-          (click)="loginAsDemoStudent()"
-          style="width: 100%; margin-bottom: 14px; padding: 10px; background: #eef0ff; color: #4a33e0; border: 1px solid #4a33e0; border-radius: 8px; font-weight: 600; cursor: pointer;">
-          ? 1-Click Sign In as Aarav Sharma (B.Tech CSE � 9.15 CGPA)
-        </button>
-
         <form (ngSubmit)="onSubmitLogin()" class="login-form">
           <div class="form-group">
-            <label>Registered student email</label>
+            <label for="student-email">Registered student email</label>
             <input
+              id="student-email"
               type="text"
               class="form-input"
               placeholder="Student email"
@@ -121,8 +113,9 @@
           </div>
 
           <div class="form-group">
-            <label>Password / Student PIN</label>
+            <label for="student-password">Password / Student PIN</label>
             <input
+              id="student-password"
               type="password"
               class="form-input"
               placeholder="••••••••"

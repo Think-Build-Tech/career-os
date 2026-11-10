@@ -1,38 +1,18 @@
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import ClientIdentity, authenticate_client
-from app.config.aurora_db import AuroraDatabase, close_aurora_connection, connect_to_aurora
 from app.config.settings import get_settings
 from app.models.generation import GenerateRequest, GenerateResponse
 from app.providers.base import ProviderError
 from app.providers.registry import build_provider_registry
 from app.services.gateway import LLMGateway
 
-
-@asynccontextmanager
-async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-    """Initialize shared infrastructure before serving requests."""
-
-    settings = get_settings()
-    database: AuroraDatabase | None = None
-    try:
-        database = connect_to_aurora(settings)
-        database.initialize_schema()
-        application.state.database = database
-        application.state.gateway = LLMGateway(database, build_provider_registry(settings))
-        yield
-    finally:
-        close_aurora_connection(database)
-        application.state.database = None
-
-
 settings = get_settings()
-app = FastAPI(title=settings.app_name, lifespan=lifespan, debug=settings.debug)
+app = FastAPI(title=settings.app_name, debug=settings.debug)
+app.state.gateway = LLMGateway(build_provider_registry(settings))
 
 if settings.cors_origins:
     app.add_middleware(
@@ -50,11 +30,7 @@ def health_check() -> dict[str, str]:
 
 
 @app.get("/ready")
-def readiness_check(request: Request) -> dict[str, str]:
-    try:
-        request.app.state.database.healthcheck()
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database is unavailable") from exc
+def readiness_check() -> dict[str, str]:
     return {"status": "ready"}
 
 

@@ -32,6 +32,8 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: careeros-api
     restart: unless-stopped
+    env_file:
+      - ./apps/api/.env
     environment:
       PORT: "5000"
       HOST: "0.0.0.0"
@@ -44,6 +46,7 @@ services:
       DB_SYNC: "false"
       AI_SERVICE_URL: "http://ai-framework:8000"
       AI_SERVICE_API_KEY: "local-dev-careeros-ai-token"
+      AUTH_TOKEN_SECRET: "careeros-dev-auth-token-secret-key-32chars-min"
     ports:
       - "5000:5000"
     depends_on:
@@ -62,18 +65,14 @@ services:
       - ./apps/ai-framework/.env
     environment:
       APP_ENV: "development"
-      AURORA_DB_HOST: "postgres"
-      AURORA_DB_PORT: "5432"
-      AURORA_DB_NAME: "careeros_dev"
-      AURORA_DB_USER: "postgres"
-      AURORA_DB_PASSWORD: "admin"
-      AURORA_DB_SSLMODE: "disable"
       AI_SERVICE_API_KEYS: "careeros-api=local-dev-careeros-ai-token"
+      LLM_PROVIDER: "openai_compatible"
+      OPENAI_BASE_URL: "http://host.docker.internal:11434/v1"
+      OPENAI_MODEL: "llama3.1:8b-instruct-q4_K_M"
     ports:
       - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - careeros-network
 

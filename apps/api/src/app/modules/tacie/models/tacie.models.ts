@@ -36,6 +36,28 @@ export class AiRun extends Model<InferAttributes<AiRun>, InferCreationAttributes
   declare created_at: CreationOptional<Date>;
 }
 
+export class AiUsageRecord extends Model<
+  InferAttributes<AiUsageRecord>,
+  InferCreationAttributes<AiUsageRecord>
+> {
+  declare id: CreationOptional<string>;
+  declare request_id: string;
+  declare client_id: string;
+  declare application_id: CreationOptional<string | null>;
+  declare signature_type: string;
+  declare provider: string;
+  declare model_name: string;
+  declare status: string;
+  declare input_tokens: CreationOptional<number | null>;
+  declare output_tokens: CreationOptional<number | null>;
+  declare total_tokens: CreationOptional<number | null>;
+  declare latency_ms: number;
+  declare metadata: CreationOptional<Record<string, unknown>>;
+  declare error_code: CreationOptional<string | null>;
+  declare error_message: CreationOptional<string | null>;
+  declare created_at: CreationOptional<Date>;
+}
+
 export class ResumeAnalysis extends Model<
   InferAttributes<ResumeAnalysis>,
   InferCreationAttributes<ResumeAnalysis>
@@ -207,6 +229,38 @@ AiRun.init(
     createdAt: "created_at",
     updatedAt: false,
     indexes: [{ fields: ["run_type", "status"] }, { fields: ["created_at"] }],
+  })
+);
+
+AiUsageRecord.init(
+  {
+    id: idAttribute,
+    request_id: { type: DataTypes.UUID, allowNull: false, unique: true },
+    client_id: { type: DataTypes.STRING(128), allowNull: false },
+    application_id: { type: DataTypes.STRING(256), allowNull: true },
+    signature_type: { type: DataTypes.STRING(128), allowNull: false },
+    provider: { type: DataTypes.STRING(64), allowNull: false },
+    model_name: { type: DataTypes.STRING(256), allowNull: false },
+    status: { type: DataTypes.STRING(32), allowNull: false },
+    input_tokens: { type: DataTypes.INTEGER, allowNull: true },
+    output_tokens: { type: DataTypes.INTEGER, allowNull: true },
+    total_tokens: { type: DataTypes.INTEGER, allowNull: true },
+    latency_ms: { type: DataTypes.INTEGER, allowNull: false },
+    metadata: jsonObjectAttribute,
+    error_code: { type: DataTypes.STRING(128), allowNull: true },
+    error_message: { type: DataTypes.TEXT, allowNull: true },
+    created_at: createdAtAttribute,
+  },
+  modelOptions(sequelize, "ai_usage_records", "AiUsageRecord", {
+    timestamps: true,
+    createdAt: "created_at",
+    updatedAt: false,
+    indexes: [
+      { unique: true, fields: ["request_id"] },
+      { fields: ["client_id", "created_at"] },
+      { fields: ["signature_type", "created_at"] },
+      { fields: ["status", "created_at"] },
+    ],
   })
 );
 
@@ -419,6 +473,7 @@ AiCreditEvent.belongsTo(AiUsageQuota, { foreignKey: "quota_id", as: "quota" });
 
 export default {
   AiRun,
+  AiUsageRecord,
   ResumeAnalysis,
   CandidateSearch,
   CandidateMatchRun,

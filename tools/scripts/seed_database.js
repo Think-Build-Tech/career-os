@@ -12,8 +12,9 @@ const DB_USER = process.env.DB_USER || 'postgres';
 const DB_PASSWORD = process.env.DB_PASSWORD || 'postgres';
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_PORT = Number(process.env.DB_PORT || 5432);
-const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || process.env.SEED_PASSWORD;
-const SEED_USER_PASSWORD = process.env.SEED_USER_PASSWORD || process.env.SEED_PASSWORD;
+const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'atharvabholework@gmail.com';
+const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || process.env.SEED_PASSWORD || 'Password@123';
+const SEED_USER_PASSWORD = process.env.SEED_USER_PASSWORD || process.env.SEED_PASSWORD || 'Password@123';
 const APPLY_SCHEMA = process.env.SEED_APPLY_SCHEMA !== 'false';
 const CONFIRMED_DB = process.env.SEED_CONFIRM_DB;
 
@@ -105,7 +106,13 @@ async function seed(client) {
   const cohortEceId = id('cohort-ece-2027');
 
   const accounts = {
-    admin: { global: id('global-admin'), local: null, email: 'platform.admin@careeros.dev', first: 'Nandita', last: 'Kapoor' },
+    admin: {
+      global: id('global-admin'),
+      local: null,
+      email: SEED_ADMIN_EMAIL,
+      first: process.env.SEED_ADMIN_FIRST_NAME || 'Atharva',
+      last: process.env.SEED_ADMIN_LAST_NAME || 'Bhole',
+    },
     tpo: { global: id('global-tpo'), local: id('user-tpo'), email: 'ananya.rao@apex.edu.in', first: 'Ananya', last: 'Rao' },
     meera: { global: id('global-meera'), local: id('user-meera'), email: 'meera.joshi@students.apex.edu.in', first: 'Meera', last: 'Joshi' },
     arjun: { global: id('global-arjun'), local: id('user-arjun'), email: 'arjun.nair@students.apex.edu.in', first: 'Arjun', last: 'Nair' },

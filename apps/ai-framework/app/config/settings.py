@@ -26,17 +26,6 @@ class Settings:
     app_env: str
     debug: bool
 
-    aurora_region: str
-    aurora_db_host: str | None
-    aurora_db_port: int
-    aurora_db_name: str
-    aurora_db_user: str
-    aurora_db_password: str | None
-    aurora_db_sslmode: str
-    aws_profile: str | None
-    aurora_db_pool_min: int
-    aurora_db_pool_max: int
-
     default_provider: str
     bedrock_region: str
     bedrock_model: str | None
@@ -76,21 +65,10 @@ def _parse_api_keys(value: str | None) -> tuple[tuple[str, str], ...]:
 def get_settings() -> Settings:
     """Load settings once per process."""
 
-    aurora_region = os.getenv("AURORA_DB_REGION", os.getenv("AURORA_REGION", "ap-south-1"))
     return Settings(
         app_name=os.getenv("APP_NAME", "AI Framework Service"),
         app_env=os.getenv("APP_ENV", "development"),
         debug=_as_bool(os.getenv("DEBUG")),
-        aurora_region=aurora_region,
-        aurora_db_host=os.getenv("AURORA_DB_HOST"),
-        aurora_db_port=_as_int(os.getenv("AURORA_DB_PORT"), 5432),
-        aurora_db_name=os.getenv("AURORA_DB_NAME", "postgres"),
-        aurora_db_user=os.getenv("AURORA_DB_USER", "postgres"),
-        aurora_db_password=os.getenv("AURORA_DB_PASSWORD"),
-        aurora_db_sslmode=os.getenv("AURORA_DB_SSLMODE", "require"),
-        aws_profile=os.getenv("AWS_PROFILE"),
-        aurora_db_pool_min=_as_int(os.getenv("AURORA_DB_POOL_MIN"), 1),
-        aurora_db_pool_max=_as_int(os.getenv("AURORA_DB_POOL_MAX"), 10),
         default_provider=os.getenv("LLM_PROVIDER", "bedrock"),
         bedrock_region=os.getenv("BEDROCK_REGION", "ap-south-1"),
         bedrock_model=os.getenv("BEDROCK_MODEL"),

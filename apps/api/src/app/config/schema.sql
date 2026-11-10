@@ -128,6 +128,30 @@ CREATE TABLE public.ai_runs (
 
 
 --
+-- Name: ai_usage_records; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_usage_records (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    request_id uuid NOT NULL UNIQUE,
+    client_id character varying(128) NOT NULL,
+    application_id character varying(256),
+    signature_type character varying(128) NOT NULL,
+    provider character varying(64) NOT NULL,
+    model_name character varying(256) NOT NULL,
+    status character varying(32) NOT NULL,
+    input_tokens integer,
+    output_tokens integer,
+    total_tokens integer,
+    latency_ms integer NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    error_code character varying(128),
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: ai_usage_quotas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3627,6 +3651,27 @@ CREATE INDEX ai_runs_created_at ON public.ai_runs USING btree (created_at);
 --
 
 CREATE INDEX ai_runs_run_type_status ON public.ai_runs USING btree (run_type, status);
+
+
+--
+-- Name: ai_usage_records_client_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_usage_records_client_created ON public.ai_usage_records USING btree (client_id, created_at DESC);
+
+
+--
+-- Name: ai_usage_records_signature_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_usage_records_signature_created ON public.ai_usage_records USING btree (signature_type, created_at DESC);
+
+
+--
+-- Name: ai_usage_records_status_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ai_usage_records_status_created ON public.ai_usage_records USING btree (status, created_at DESC);
 
 
 --

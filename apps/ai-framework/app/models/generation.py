@@ -37,4 +37,3 @@ class GenerateResponse(BaseModel):
     content: str
     usage: Usage
     latency_ms: int
-    usage_record_id: int | None = None

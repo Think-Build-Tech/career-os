@@ -7,6 +7,7 @@
     "start:mobile": "nx start mobile",
     "start:mobile:web": "nx serve mobile",
     "start:api": "nx serve api",
+    "start:ai": "cd apps/ai-framework && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --env-file .env",
     "build:web": "nx build web",
     "build:api": "nx build api",
     "build:shared": "nx build shared",

@@ -196,10 +196,10 @@ export class PortalStateService {
     if (subTab) this.activeSubTab.set(subTab);
     if (appView) this.activeApplicationView.set(appView);
 
-    if (page === 'home') {
-      this.router.navigate(['/portal']);
-    } else if (page === 'jobs') {
+    if (page === 'jobs') {
       this.router.navigate(['/jobs']);
+    } else {
+      this.router.navigate(['/portal']);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -248,6 +248,10 @@ export class PortalStateService {
     }
     if (type === 'cmd-palette') {
       this.isCommandPaletteOpen.set(true);
+      return;
+    }
+    if (type === 'tpo-governance') {
+      this.router.navigate(['/admin']);
       return;
     }
     this.activeDrawer.set({ type, payload });

@@ -13,6 +13,8 @@
         <span class="rounded-full bg-emerald-50 px-2.5 py-0.5 font-mono text-xs font-semibold text-emerald-700">
           ● DB: {{ auth.databaseName() }}
         </span>
+        <span class="text-xs text-[#8b91ad] max-md:hidden">/</span>
+        <span class="text-xs font-semibold text-[#5a6177] max-md:hidden">{{ getPageTitle(portal.activePage()) }}</span>
       </div>
       <div class="flex items-center gap-4">
         <div class="text-right">
@@ -28,254 +30,816 @@
       </div>
     </header>
 
-    <!-- Page Content -->
+    <!-- Page Content Container -->
     <main class="flex-1 p-6">
       @if (portal.shellLoadError() || loadError()) {
         <div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
-          <strong>API request failed.</strong> {{ portal.shellLoadError() || loadError() }}
+          <strong>API notification:</strong> {{ portal.shellLoadError() || loadError() }}
           <button type="button" class="ml-3 underline" (click)="loadData(auth.studentId()!)">Retry</button>
         </div>
       }
       @if (portal.isShellLoading() || isLoading()) {
-        <div class="mb-5 rounded-xl border border-[#dfe3f0] bg-white px-4 py-3 text-sm text-[#5a6177]">Loading student data from the API…</div>
-      }
-      <section class="block">
-  <!-- Header -->
-  <div class="mb-5 flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="mb-1 text-[26px] font-bold leading-tight tracking-[-0.025em] text-[#12162b] max-md:text-[22px]">
-        Good morning, {{ firstName() }}
-      </h1>
-      <p class="text-[15px] text-[#5a6177]">
-        Command Center · You have {{ pendingActions().length }} time-sensitive placement actions.
-      </p>
-    </div>
-    <div class="flex flex-wrap gap-2">
-      <button
-        type="button"
-        (click)="portal.openActionModalOrDrawer('preflight')"
-        class="inline-flex min-h-[38px] items-center justify-center rounded-lg border border-[#e3e6ef] bg-white px-3.5 py-2 text-[13.5px] font-semibold text-[#12162b] hover:bg-[#f9fafc]">
-        System Pre-Flight Check
-      </button>
-      <button
-        type="button"
-        (click)="portal.navigateToPage('apps', undefined, 'offers')"
-        class="inline-flex min-h-[38px] items-center justify-center rounded-lg bg-[#4a33e0] px-3.5 py-2 text-[13.5px] font-semibold text-white shadow-sm hover:brightness-110">
-        Review Offers
-      </button>
-    </div>
-  </div>
-
-  <div class="flex flex-col gap-4">
-    <!-- SLA Queue -->
-    <div class="rounded-xl border border-[#2e366e] bg-gradient-to-br from-[#141836] to-[#1f2552] p-5 text-white shadow-sm">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-3.5">
-        <div>
-          <h2 class="m-0 text-[16.5px] font-bold text-white">Priority SLA Action Queue</h2>
-          <p class="text-[13px] text-white/80">
-            Missing mandatory placement cell SLAs may result in compliance strikes under institutional policy.
-          </p>
+        <div class="mb-5 rounded-xl border border-[#dfe3f0] bg-white px-4 py-3 text-sm text-[#5a6177]">
+          Loading verified institutional data from the API…
         </div>
-        <span class="rounded-md bg-[#1e2445] px-2 py-0.5 font-mono text-xs font-semibold text-white">
-          {{ compliance()?.active_strikes ?? 0 }}/{{ compliance()?.max_allowed_strikes ?? 2 }} No-Show Strikes
-        </span>
-      </div>
+      }
 
-      @for (item of pendingActions(); track item.id) {
-        <div class="mt-2.5 flex flex-wrap items-center justify-between gap-3.5 rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 first:mt-0">
-          <div>
-            <div class="flex flex-wrap items-center gap-2">
-              <b class="font-semibold">{{ item.title }}</b>
-              <span class="rounded-md border border-amber-500/35 bg-amber-500/20 px-2 py-0.5 font-mono text-xs font-semibold text-amber-400">
-                Due: {{ item.deadline | date:'dd MMM, hh:mm a' }}
+      <!-- Page Switcher -->
+      @switch (portal.activePage()) {
+
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <!-- 1. HOME: Command Center Dashboard                           -->
+        <!-- ──────────────────────────────────────────────────────────── -->
+        @case ('home') {
+          <section class="block">
+            <!-- Header -->
+            <div class="mb-5 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h1 class="mb-1 text-[26px] font-bold leading-tight tracking-[-0.025em] text-[#12162b] max-md:text-[22px]">
+                  Good morning, {{ firstName() }}
+                </h1>
+                <p class="text-[15px] text-[#5a6177]">
+                  Command Center · You have {{ pendingActions().length }} time-sensitive placement actions.
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  (click)="portal.openActionModalOrDrawer('preflight')"
+                  class="inline-flex min-h-[38px] items-center justify-center rounded-lg border border-[#e3e6ef] bg-white px-3.5 py-2 text-[13.5px] font-semibold text-[#12162b] hover:bg-[#f9fafc]">
+                  System Pre-Flight Check
+                </button>
+                <button
+                  type="button"
+                  (click)="portal.navigateToPage('apps', undefined, 'offers')"
+                  class="inline-flex min-h-[38px] items-center justify-center rounded-lg bg-[#4a33e0] px-3.5 py-2 text-[13.5px] font-semibold text-white shadow-sm hover:brightness-110">
+                  Review Offers ({{ actions().length }})
+                </button>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-4">
+              <!-- SLA Queue -->
+              <div class="rounded-xl border border-[#2e366e] bg-gradient-to-br from-[#141836] to-[#1f2552] p-5 text-white shadow-sm">
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-3.5">
+                  <div>
+                    <h2 class="m-0 text-[16.5px] font-bold text-white">Priority SLA Action Queue</h2>
+                    <p class="text-[13px] text-white/80">
+                      Missing mandatory placement cell SLAs may result in compliance strikes under institutional policy.
+                    </p>
+                  </div>
+                  <span class="rounded-md bg-[#1e2445] px-2 py-0.5 font-mono text-xs font-semibold text-white">
+                    {{ compliance()?.active_strikes ?? 0 }}/{{ compliance()?.max_allowed_strikes ?? 2 }} No-Show Strikes
+                  </span>
+                </div>
+
+                @for (item of pendingActions(); track item.id) {
+                  <div class="mt-2.5 flex flex-wrap items-center justify-between gap-3.5 rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 first:mt-0">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <b class="font-semibold">{{ item.title }}</b>
+                        <span class="rounded-md border border-amber-500/35 bg-amber-500/20 px-2 py-0.5 font-mono text-xs font-semibold text-amber-400">
+                          Due: {{ item.deadline | date:'dd MMM, hh:mm a' }}
+                        </span>
+                      </div>
+                      <p class="mt-1 text-[13px] text-white/85">{{ item.subtitle || item.action_type }}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        (click)="portal.navigateToPage('msgs')"
+                        class="rounded-lg border border-white/20 bg-white/10 px-3.5 py-2 text-[13.5px] font-semibold text-white hover:bg-white/20">
+                        Prep with TACIE
+                      </button>
+                      <button
+                        type="button"
+                        (click)="completeSla(item)"
+                        class="rounded-lg bg-[#4a33e0] px-3.5 py-2 text-[13.5px] font-semibold text-white shadow-sm hover:brightness-110">
+                        Confirm & Complete
+                      </button>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="py-4 text-center text-sm text-white/60">
+                    ✓ All mandatory placement SLA action items are cleared.
+                  </div>
+                }
+              </div>
+
+              <!-- Two Column Dashboard Grid -->
+              <div class="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
+                <!-- Role Benchmark Readiness -->
+                <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+                  <div class="mb-3 flex items-center justify-between">
+                    <div>
+                      <h3 class="m-0 text-[15.5px] font-bold text-[#12162b]">Role Benchmark Readiness</h3>
+                      <p class="text-[13px] text-[#5a6177]">AI gap analysis benchmarked against current hiring rounds.</p>
+                    </div>
+                    <span class="rounded-full bg-[#f4f6fb] px-2.5 py-1 font-mono text-xs font-bold text-[#4a33e0]">
+                      {{ skillGap()?.overall_readiness_score ?? 82 }}% Ready
+                    </span>
+                  </div>
+
+                  <div class="mb-4 flex gap-1.5 rounded-lg bg-[#f4f6fb] p-1">
+                    @for (r of roleBenchmarks; track r.key) {
+                      <button
+                        type="button"
+                        (click)="switchRoleBenchmark(r.key, r.roleName)"
+                        [class.bg-white]="selectedRoleKey() === r.key"
+                        [class.shadow-sm]="selectedRoleKey() === r.key"
+                        [class.text-[#4a33e0]]="selectedRoleKey() === r.key"
+                        class="flex-1 rounded-md px-2.5 py-1 text-center text-xs font-semibold text-[#5a6177] transition">
+                        {{ r.label }}
+                      </button>
+                    }
+                  </div>
+
+                  <div class="space-y-3">
+                    @for (bar of skillGap()?.breakdown ?? []; track bar.label) {
+                      <div>
+                        <div class="mb-1 flex justify-between text-xs font-medium">
+                          <span class="text-[#12162b]">{{ bar.label }}</span>
+                          <span class="font-mono text-[#5a6177]">{{ bar.score_percentage }}%</span>
+                        </div>
+                        <div class="h-2 w-full overflow-hidden rounded-full bg-[#edf0f8]">
+                          <div
+                            class="h-full rounded-full transition-all duration-300"
+                            [ngClass]="getBarToneClass(bar.tone)"
+                            [style.width.%]="bar.score_percentage">
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="mt-4 border-t border-[#f0f2f8] pt-3 text-right">
+                    <button
+                      type="button"
+                      (click)="portal.navigateToPage('grow', 'assess')"
+                      class="text-xs font-semibold text-[#4a33e0] hover:underline">
+                      Take Benchmark Assessment →
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Next 7 Days Academic & Placement Timetable -->
+                <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+                  <div class="mb-3 flex items-center justify-between">
+                    <div>
+                      <h3 class="m-0 text-[15.5px] font-bold text-[#12162b]">Academic & Drive Timetable</h3>
+                      <p class="text-[13px] text-[#5a6177]">Unified schedule with conflict detection.</p>
+                    </div>
+                    @if (conflicts()?.has_conflict) {
+                      <span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-700">
+                        ⚠️ Timetable Conflict
+                      </span>
+                    }
+                  </div>
+
+                  <div class="space-y-2.5">
+                    @for (ev of events(); track ev.id) {
+                      <div class="flex items-center justify-between rounded-lg border border-[#f0f2f8] bg-[#fafbff] p-3">
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <b class="text-[13.5px] text-[#12162b]">{{ ev.title }}</b>
+                            <span class="rounded bg-[#eef0ff] px-1.5 py-0.5 font-mono text-[10px] font-semibold text-[#4a33e0]">
+                              {{ ev.event_type }}
+                            </span>
+                          </div>
+                          <div class="text-xs text-[#5a6177]">
+                            {{ ev.starts_at | date:'EEE, dd MMM · hh:mm a' }}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          (click)="portal.openActionModalOrDrawer('preflight', ev)"
+                          class="rounded-md border border-[#e3e6ef] bg-white px-2.5 py-1 text-xs font-medium text-[#12162b] hover:bg-[#f4f6fb]">
+                          Pre-flight
+                        </button>
+                      </div>
+                    } @empty {
+                      <div class="py-6 text-center text-xs text-[#8b91ad]">No upcoming academic exams scheduled this week.</div>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <!-- Priority Placement Drives -->
+              <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+                <div class="mb-3 flex items-center justify-between">
+                  <div>
+                    <h3 class="m-0 text-[15.5px] font-bold text-[#12162b]">Active Priority Placement Drives</h3>
+                    <p class="text-[13px] text-[#5a6177]">Drives with upcoming registration deadlines.</p>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="portal.navigateToPage('jobs')"
+                    class="text-xs font-semibold text-[#4a33e0] hover:underline">
+                    View All Drives ({{ portal.totalOpenJobsCount() }}) →
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+                  @for (job of priorityDrives(); track job.id) {
+                    <div class="flex flex-col justify-between rounded-lg border border-[#eef0f8] p-4 transition hover:border-[#4a33e0]/40 hover:shadow-sm">
+                      <div>
+                        <div class="mb-1 flex items-center justify-between">
+                          <span class="rounded bg-indigo-50 px-2 py-0.5 font-mono text-[11px] font-bold text-[#4a33e0]">
+                            {{ job.company?.tier || job.tier_label || 'DREAM' }}
+                          </span>
+                          <span class="font-mono text-xs font-bold text-emerald-600">
+                            {{ formatCurrency(job.total_ctc) }} CTC
+                          </span>
+                        </div>
+                        <h4 class="m-0 text-sm font-bold text-[#12162b]">{{ job.title }}</h4>
+                        <div class="text-xs text-[#5a6177]">{{ job.company?.name || job.company_name }} · {{ job.location || 'Pan India' }}</div>
+                      </div>
+                      <div class="mt-3 pt-3 border-t border-[#f4f6fb] flex items-center justify-between">
+                        <span class="text-[11px] text-[#8b91ad]">{{ job.job_type }}</span>
+                        <button
+                          type="button"
+                          (click)="portal.navigateToPage('jobs')"
+                          class="rounded bg-[#eef0ff] px-2.5 py-1 text-xs font-semibold text-[#4a33e0] hover:bg-[#4a33e0] hover:text-white transition">
+                          View & Apply →
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </section>
+        }
+
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <!-- 2. APPS: Applications & Offers                              -->
+        <!-- ──────────────────────────────────────────────────────────── -->
+        @case ('apps') {
+          <section class="space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h1 class="text-2xl font-bold text-[#12162b]">Applications & Offers</h1>
+                <p class="text-sm text-[#5a6177]">Track interview progression, shortlist stages, and sign verified job offers.</p>
+              </div>
+
+              <!-- Toggle: Pipeline vs Offers -->
+              <div class="flex rounded-lg border border-[#e3e6ef] bg-white p-1">
+                <button
+                  type="button"
+                  (click)="portal.activeApplicationView.set('pipeline')"
+                  [class.bg-[#4a33e0]]="portal.activeApplicationView() === 'pipeline'"
+                  [class.text-white]="portal.activeApplicationView() === 'pipeline'"
+                  class="rounded-md px-3.5 py-1.5 text-xs font-semibold text-[#5a6177] transition">
+                  Active Pipeline ({{ applications().length }})
+                </button>
+                <button
+                  type="button"
+                  (click)="portal.activeApplicationView.set('offers')"
+                  [class.bg-[#4a33e0]]="portal.activeApplicationView() === 'offers'"
+                  [class.text-white]="portal.activeApplicationView() === 'offers'"
+                  class="rounded-md px-3.5 py-1.5 text-xs font-semibold text-[#5a6177] transition">
+                  Offers Received (1)
+                </button>
+              </div>
+            </div>
+
+            @if (portal.activeApplicationView() === 'pipeline') {
+              <!-- Applications Table / Cards -->
+              <div class="rounded-xl border border-[#e3e6ef] bg-white shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-[#e3e6ef] bg-[#fafbff] font-semibold text-xs text-[#5a6177] flex justify-between">
+                  <span>COMPANY & ROLE</span>
+                  <span>STATUS & PROGRESSION</span>
+                </div>
+                <div class="divide-y divide-[#f0f2f8]">
+                  @for (app of applications(); track app.id) {
+                    <div class="p-4 flex flex-wrap items-center justify-between gap-4 hover:bg-[#fafbff] transition">
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <b class="text-sm text-[#12162b]">{{ app.role_title }}</b>
+                          <span class="rounded bg-indigo-50 px-2 py-0.5 font-mono text-[11px] font-bold text-[#4a33e0]">
+                            {{ app.tier_label || 'DREAM' }}
+                          </span>
+                        </div>
+                        <div class="text-xs text-[#5a6177] mt-0.5">
+                          {{ app.company_name }} · Applied on {{ app.applied_date | date:'dd MMM yyyy' }} · {{ app.ctc_label }}
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          {{ app.current_stage_label || 'SHORTLISTED' }}
+                        </span>
+                        <button
+                          type="button"
+                          (click)="portal.navigateToPage('msgs')"
+                          class="rounded-lg border border-[#e3e6ef] bg-white px-3 py-1.5 text-xs font-medium text-[#12162b] hover:bg-[#f4f6fb]">
+                          Prep Interview →
+                        </button>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="p-8 text-center text-sm text-[#8b91ad]">
+                      No active applications submitted yet. Browse open drives in <button class="text-[#4a33e0] underline font-semibold" (click)="portal.navigateToPage('jobs')">Jobs</button>.
+                    </div>
+                  }
+                </div>
+              </div>
+            } @else {
+              <!-- Official Offers -->
+              <div class="rounded-xl border border-emerald-200 bg-emerald-50/40 p-6">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <span class="rounded-full bg-emerald-600 px-3 py-1 font-mono text-xs font-bold text-white">
+                      OFFER EXTENDED · ACTION REQUIRED
+                    </span>
+                    <h3 class="mt-2 text-xl font-bold text-[#12162b]">Persistent Systems — Backend Development Engineer</h3>
+                    <p class="text-sm text-[#5a6177]">Annual CTC: ₹12,00,000 INR (Base: ₹10,50,000) · Location: Pune / Hybrid</p>
+                    <div class="mt-2 text-xs text-amber-700 font-semibold">
+                      Decision Deadline: 15 Nov 2026, 06:30 PM (Institutional SLA applies)
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      (click)="portal.navigateToPage('msgs')"
+                      class="rounded-lg border border-[#e3e6ef] bg-white px-4 py-2 text-xs font-semibold text-[#12162b] hover:bg-[#f9fafc]">
+                      Discuss with TACIE
+                    </button>
+                    <button
+                      type="button"
+                      (click)="acceptOffer('offer-meera-persistent')"
+                      class="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700">
+                      Accept & Sign Offer Document →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </section>
+        }
+
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <!-- 3. GROW: Skills, Assessments & Learning                     -->
+        <!-- ──────────────────────────────────────────────────────────── -->
+        @case ('grow') {
+          <section class="space-y-6">
+            <div>
+              <h1 class="text-2xl font-bold text-[#12162b]">Skills & Career Growth</h1>
+              <p class="text-sm text-[#5a6177]">Benchmark your technical readiness, complete verified proctored assessments, and earn credentials.</p>
+            </div>
+
+            <!-- Role Benchmark Analyzer -->
+            <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+              <div class="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 class="text-base font-bold text-[#12162b]">Role Competency Benchmark</h3>
+                  <p class="text-xs text-[#5a6177]">Target Role: {{ skillGap()?.target_role || 'Backend Engineer' }} · Overall: {{ skillGap()?.overall_readiness_score ?? 82 }}% Ready</p>
+                </div>
+                <div class="flex gap-1.5 rounded-lg bg-[#f4f6fb] p-1">
+                  @for (r of roleBenchmarks; track r.key) {
+                    <button
+                      type="button"
+                      (click)="switchRoleBenchmark(r.key, r.roleName)"
+                      [class.bg-white]="selectedRoleKey() === r.key"
+                      [class.text-[#4a33e0]]="selectedRoleKey() === r.key"
+                      class="rounded-md px-3 py-1 text-xs font-semibold text-[#5a6177] transition">
+                      {{ r.label }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4 max-md:grid-cols-1 mt-4">
+                @for (bar of skillGap()?.breakdown ?? []; track bar.label) {
+                  <div class="rounded-lg border border-[#f0f2f8] p-3 bg-[#fafbff]">
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                      <span>{{ bar.label }}</span>
+                      <span class="font-mono">{{ bar.score_percentage }}%</span>
+                    </div>
+                    <div class="h-2 w-full rounded-full bg-[#edf0f8] overflow-hidden">
+                      <div
+                        class="h-full rounded-full"
+                        [ngClass]="getBarToneClass(bar.tone)"
+                        [style.width.%]="bar.score_percentage">
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Assessments Catalog -->
+            <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+              <div class="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 class="text-base font-bold text-[#12162b]">Verified Technical Assessments</h3>
+                  <p class="text-xs text-[#5a6177]">College-verified proctored assessments recognized by participating recruiters.</p>
+                </div>
+                <span class="rounded bg-indigo-50 px-2 py-1 font-mono text-xs font-bold text-[#4a33e0]">
+                  AI Proctoring Active
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                @for (ass of assessments(); track ass.id) {
+                  <div class="rounded-lg border border-[#e3e6ef] p-4 flex flex-col justify-between hover:border-[#4a33e0] transition">
+                    <div>
+                      <div class="flex items-center justify-between mb-2">
+                        <span class="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                          {{ ass.is_mandatory ? 'MANDATORY' : 'OPTIONAL' }}
+                        </span>
+                        <span class="text-xs font-mono text-[#5a6177]">{{ ass.duration_minutes || 60 }} mins</span>
+                      </div>
+                      <h4 class="font-bold text-sm text-[#12162b]">{{ ass.title }}</h4>
+                      <p class="text-xs text-[#5a6177] mt-1">{{ ass.category }} · Total: {{ ass.total_marks }} Marks</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-[#f4f6fb] flex items-center justify-between">
+                      <span class="text-xs text-[#8b91ad]">Pass: {{ ass.pass_marks }} Marks</span>
+                      <button
+                        type="button"
+                        (click)="portal.openActionModalOrDrawer('preflight', ass)"
+                        class="rounded-lg bg-[#4a33e0] px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110">
+                        Launch Assessment →
+                      </button>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="col-span-2 py-6 text-center text-xs text-[#8b91ad]">Loading assessments...</div>
+                }
+              </div>
+            </div>
+
+            <!-- Learning Guides -->
+            <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+              <h3 class="text-base font-bold text-[#12162b] mb-3">TPO Placement Guides & Learning Posts</h3>
+              <div class="space-y-3">
+                @for (post of learningPosts(); track post.id) {
+                  <div class="rounded-lg border border-[#f0f2f8] p-3 hover:bg-[#fafbff] transition flex items-center justify-between">
+                    <div>
+                      <b class="text-sm text-[#12162b]">{{ post.title }}</b>
+                      <div class="text-xs text-[#5a6177] mt-0.5">{{ post.category || 'Interview Preparation' }} · Published by TPO Cell</div>
+                    </div>
+                    <span class="rounded bg-[#eef0ff] px-2.5 py-1 text-xs font-semibold text-[#4a33e0]">Read Guide →</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </section>
+        }
+
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <!-- 4. PEOPLE: Alumni Network & Referrals                       -->
+        <!-- ──────────────────────────────────────────────────────────── -->
+        @case ('people') {
+          <section class="space-y-6">
+            <div>
+              <h1 class="text-2xl font-bold text-[#12162b]">Alumni Network & Referrals</h1>
+              <p class="text-sm text-[#5a6177]">Connect with verified alumni from Apex Institute of Technology working across top technology companies.</p>
+            </div>
+
+            <!-- Active Referrals -->
+            <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+              <h3 class="text-base font-bold text-[#12162b] mb-3">Active Alumni Job Referrals</h3>
+              <div class="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                @for (ref of alumniReferrals(); track ref.id) {
+                  <div class="rounded-lg border border-[#eef0f8] p-4 flex flex-col justify-between hover:border-[#4a33e0] transition">
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="font-bold text-sm text-[#12162b]">{{ ref.company_name }}</span>
+                        <span class="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">VERIFIED REFERRAL</span>
+                      </div>
+                      <div class="text-xs font-semibold text-[#4a33e0]">{{ ref.role_title }}</div>
+                      <p class="text-xs text-[#5a6177] mt-1">Referred by {{ ref.alumni_name || 'Apex Alumnus' }} · Match: {{ ref.student_match_score || 88 }}%</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-[#f4f6fb] flex items-center justify-between">
+                      <span class="text-xs text-[#8b91ad]">Closes: {{ ref.closes_at | date:'dd MMM' }}</span>
+                      <button
+                        type="button"
+                        (click)="portal.showToast('Referral requested successfully!')"
+                        class="rounded-lg bg-[#4a33e0] px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110">
+                        Request Referral →
+                      </button>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="col-span-2 py-4 text-center text-xs text-[#8b91ad]">No active external referrals currently posted.</div>
+                }
+              </div>
+            </div>
+
+            <!-- Alumni Directory -->
+            <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+              <h3 class="text-base font-bold text-[#12162b] mb-3">Apex Alumni Mentors</h3>
+              <div class="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+                @for (alum of alumniProfiles(); track alum.id) {
+                  <div class="rounded-lg border border-[#f0f2f8] p-4 bg-[#fafbff] hover:shadow-sm transition">
+                    <div class="h-10 w-10 rounded-full bg-[#4a33e0] text-white font-bold grid place-items-center text-sm mb-3">
+                      {{ alum.name ? alum.name[0] : 'A' }}
+                    </div>
+                    <b class="text-sm text-[#12162b] block">{{ alum.name || 'Rohan Mehta' }}</b>
+                    <div class="text-xs text-[#5a6177]">{{ alum.current_role || 'Software Engineer' }} at {{ alum.current_company || 'Fintech' }}</div>
+                    <div class="text-[11px] text-[#8b91ad] mt-1">Class of {{ alum.graduation_year || 2021 }} · Apex Alum</div>
+                    <button
+                      type="button"
+                      (click)="portal.navigateToPage('msgs')"
+                      class="mt-3 w-full rounded-md border border-[#4a33e0] bg-white py-1.5 text-xs font-semibold text-[#4a33e0] hover:bg-[#eef0ff] transition">
+                      Message / Request Mentorship
+                    </button>
+                  </div>
+                } @empty {
+                  <div class="col-span-3 py-6 text-center text-xs text-[#8b91ad]">Loading alumni directory...</div>
+                }
+              </div>
+            </div>
+          </section>
+        }
+
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <!-- 5. MSGS: TACIE AI Chat & Messages                           -->
+        <!-- ──────────────────────────────────────────────────────────── -->
+        @case ('msgs') {
+          <section class="h-[calc(100vh-140px)] flex flex-col rounded-xl border border-[#e3e6ef] bg-white shadow-sm overflow-hidden">
+            <!-- Chat Header -->
+            <div class="p-4 border-b border-[#e3e6ef] flex items-center justify-between bg-[#fafbff]">
+              <div class="flex items-center gap-3">
+                <div class="h-9 w-9 rounded-full bg-gradient-to-tr from-[#4a33e0] to-[#7b61ff] text-white font-bold grid place-items-center text-sm">
+                  ⚡
+                </div>
+                <div>
+                  <b class="text-sm text-[#12162b]">TACIE AI Career Copilot & Advisor</b>
+                  <div class="text-xs text-emerald-600 font-semibold">● Active · 100 Monthly AI Credits Available</div>
+                </div>
+              </div>
+              <span class="rounded bg-[#eef0ff] px-2.5 py-1 font-mono text-xs font-semibold text-[#4a33e0]">
+                Model: gemini-1.5-pro
               </span>
             </div>
-            <p class="mt-1 text-[13px] text-white/85">{{ item.subtitle || item.action_type }}</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              type="button"
-              (click)="portal.navigateToPage('msgs')"
-              class="rounded-lg border border-white/20 bg-white/10 px-3.5 py-2 text-[13.5px] font-semibold text-white hover:bg-white/20">
-              Prep with TACIE
-            </button>
-            <button
-              type="button"
-              (click)="completeSla(item)"
-              class="rounded-lg bg-white px-3.5 py-2 text-[13.5px] font-semibold text-[#141836] hover:brightness-95">
-              Confirm & Complete
-            </button>
-          </div>
-        </div>
-      } @empty {
-        <div class="rounded-[10px] border border-white/15 bg-white/5 p-3.5 text-[13.5px] text-white/80">
-          ✓ Zero pending SLA actions in your queue.
-        </div>
-      }
-    </div>
 
-    <!-- Readiness + Schedule Grid -->
-    <div class="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
-      <!-- Career Readiness -->
-      <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
-        <div class="flex items-start justify-between gap-3.5">
-          <div>
-            <div class="flex flex-wrap items-center gap-2">
-              <h2 class="m-0 text-[16.5px] font-bold text-[#12162b]">Career Readiness</h2>
-              @if (skillGap()?.cohort_percentile_label) {
-                <span class="rounded-md bg-[#e6f6ef] px-2 py-0.5 text-xs font-semibold text-[#127a55]">
-                  {{ skillGap()?.cohort_percentile_label }}
-                </span>
+            <!-- Messages Stream -->
+            <div class="flex-1 p-5 overflow-y-auto space-y-4 bg-[#fbfbfe]">
+              @for (msg of chatMessages(); track msg.id) {
+                <div
+                  class="flex gap-3 max-w-[80%]"
+                  [class.ml-auto]="msg.sender_id === auth.userId()"
+                  [class.flex-row-reverse]="msg.sender_id === auth.userId()">
+                  <div
+                    class="h-8 w-8 rounded-full grid place-items-center text-xs font-bold shrink-0 text-white"
+                    [class.bg-[#4a33e0]]="msg.sender_id === auth.userId()"
+                    [class.bg-[#141836]]="msg.sender_id !== auth.userId()">
+                    {{ msg.sender_id === auth.userId() ? 'ME' : 'AI' }}
+                  </div>
+                  <div
+                    class="rounded-xl p-3 text-xs leading-relaxed"
+                    [class.bg-[#4a33e0]]="msg.sender_id === auth.userId()"
+                    [class.text-white]="msg.sender_id === auth.userId()"
+                    [class.bg-white]="msg.sender_id !== auth.userId()"
+                    [class.border]="msg.sender_id !== auth.userId()"
+                    [class.border-[#e3e6ef]]="msg.sender_id !== auth.userId()"
+                    [class.text-[#12162b]]="msg.sender_id !== auth.userId()">
+                    {{ msg.content }}
+                    <div class="text-[10px] mt-1 opacity-70 text-right">{{ msg.created_at | date:'hh:mm a' }}</div>
+                  </div>
+                </div>
+              } @empty {
+                <div class="py-12 text-center text-sm text-[#8b91ad]">
+                  Start a conversation with TACIE to analyze resumes, prepare for interviews, or check company cutoffs.
+                </div>
               }
             </div>
-            <p class="mt-1 text-[13px] text-[#5a6177]">{{ skillGap()?.benchmark_summary }}</p>
-          </div>
-          <div
-            class="grid h-[86px] w-[86px] shrink-0 place-items-center rounded-full"
-            [style.background]="'conic-gradient(#4a33e0 ' + (skillGap()?.overall_readiness_score ?? 82) + '%, #e3e6ef 0)'">
-            <b class="grid h-[66px] w-[66px] place-items-center rounded-full bg-white text-xl font-bold">
-              {{ skillGap()?.overall_readiness_score ?? 82 }}%
-            </b>
-          </div>
-        </div>
 
-        <div class="my-3.5 flex flex-wrap items-center justify-between gap-2.5 rounded-lg bg-[#f3f4f8] px-3 py-2.5">
-          <span class="text-[13px] font-semibold">Target Role Benchmark:</span>
-          <div class="flex gap-0.5 rounded-lg bg-[#e5e8f2] p-[3px]">
-            @for (r of roleBenchmarks; track r.key) {
+            <!-- Input Box -->
+            <form (ngSubmit)="sendChatMessage()" class="p-3 border-t border-[#e3e6ef] bg-white flex gap-2">
+              <input
+                type="text"
+                class="flex-1 rounded-lg border border-[#e3e6ef] px-4 py-2.5 text-xs text-[#12162b] focus:border-[#4a33e0] focus:outline-none"
+                placeholder="Ask TACIE about company interview questions, resume review, or compensation benchmarks..."
+                [(ngModel)]="chatInputText"
+                name="chatInputText"
+                [disabled]="isSendingChat()"
+              />
               <button
-                type="button"
-                (click)="switchRoleBenchmark(r.key, r.roleName)"
-                [ngClass]="selectedRoleKey() === r.key ? 'bg-white text-[#12162b] shadow-sm' : 'text-[#5a6177]'"
-                class="rounded-md px-3 py-1.5 text-[13px] font-semibold transition">
-                {{ r.label }}
+                type="submit"
+                [disabled]="isSendingChat() || !chatInputText().trim()"
+                class="rounded-lg bg-[#4a33e0] px-5 py-2.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50">
+                {{ isSendingChat() ? 'Analyzing...' : 'Send →' }}
               </button>
-            }
-          </div>
-        </div>
+            </form>
+          </section>
+        }
 
-        <div class="flex flex-col gap-2.5">
-          @for (b of skillGap()?.breakdown ?? []; track b.label) {
+        <!-- ──────────────────────────────────────────────────────────── -->
+        <!-- 6. MORE: My Career Dossier & Profile                        -->
+        <!-- ──────────────────────────────────────────────────────────── -->
+        @case ('more') {
+          <section class="space-y-6">
             <div>
-              <div class="flex justify-between text-[13px]">
-                <span>{{ b.label }}</span>
-                <b>{{ b.score_percentage }}%</b>
+              <h1 class="text-2xl font-bold text-[#12162b]">My Career Dossier & Verified Records</h1>
+              <p class="text-sm text-[#5a6177]">Immutable academic credentials, verified resume versions, and placement compliance standing.</p>
+            </div>
+
+            <!-- Academic Dossier -->
+            <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-[#12162b]">Verified Academic Record (TPO Locked)</h3>
+                <span class="rounded bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">✓ TPO VERIFIED</span>
               </div>
-              <div class="mt-1.5 h-[7px] overflow-hidden rounded-full bg-[#f3f4f8]">
-                <i
-                  class="block h-full rounded-full"
-                  [ngClass]="getBarToneClass(b.tone)"
-                  [style.width.%]="b.score_percentage"></i>
+              <div class="grid grid-cols-4 gap-4 max-md:grid-cols-2">
+                <div class="p-3 bg-[#fafbff] rounded-lg border border-[#f0f2f8]">
+                  <span class="text-xs text-[#8b91ad]">Cumulative CGPA</span>
+                  <div class="text-lg font-bold text-[#12162b]">{{ portal.studentDisplayInfo().cgpa || '9.12' }}</div>
+                </div>
+                <div class="p-3 bg-[#fafbff] rounded-lg border border-[#f0f2f8]">
+                  <span class="text-xs text-[#8b91ad]">Batch Year</span>
+                  <div class="text-lg font-bold text-[#12162b]">{{ portal.studentDisplayInfo().batchYear || '2027' }}</div>
+                </div>
+                <div class="p-3 bg-[#fafbff] rounded-lg border border-[#f0f2f8]">
+                  <span class="text-xs text-[#8b91ad]">Active Backlogs</span>
+                  <div class="text-lg font-bold text-emerald-600">0 (Clean Record)</div>
+                </div>
+                <div class="p-3 bg-[#fafbff] rounded-lg border border-[#f0f2f8]">
+                  <span class="text-xs text-[#8b91ad]">Enrollment / PRN</span>
+                  <div class="text-sm font-mono font-bold text-[#12162b]">{{ portal.studentDisplayInfo().enrollmentNumber }}</div>
+                </div>
               </div>
             </div>
-          }
-        </div>
 
-        <div class="mt-3.5 flex items-center justify-between border-t border-[#e3e6ef] pt-3.5">
-          <div>
-            <b class="text-[14px]">{{ skillGap()?.highest_roi_action?.title || 'AWS Fundamentals Assessment' }}</b>
-            <div class="text-[13px] text-[#5a6177]">{{ skillGap()?.highest_roi_action?.subtitle || 'Verifies cloud deployment gap' }}</div>
+            <!-- Uploaded Resumes -->
+            <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+              <h3 class="text-base font-bold text-[#12162b] mb-3">Primary Verified Resumes</h3>
+              <div class="space-y-3">
+                @for (res of resumes(); track res.id) {
+                  <div class="rounded-lg border border-[#f0f2f8] p-4 flex items-center justify-between bg-[#fafbff]">
+                    <div>
+                      <b class="text-sm text-[#12162b]">{{ res.title || 'Backend Engineer Resume (v1.0)' }}</b>
+                      <div class="text-xs text-[#5a6177] mt-0.5">ATS Match: {{ res.ats_score || 92 }}% · Target: Backend Engineer</div>
+                    </div>
+                    <span class="rounded bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">✓ Verified</span>
+                  </div>
+                } @empty {
+                  <div class="py-4 text-center text-xs text-[#8b91ad]">No custom resumes uploaded. Default system resume active.</div>
+                }
+              </div>
+            </div>
+
+            <!-- Student Technical Projects -->
+            <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+              <h3 class="text-base font-bold text-[#12162b] mb-3">Technical Portfolio & Projects</h3>
+              <div class="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+                @for (proj of projects(); track proj.id) {
+                  <div class="rounded-lg border border-[#f0f2f8] p-4 bg-[#fafbff]">
+                    <div class="flex items-center justify-between">
+                      <b class="text-sm text-[#12162b]">{{ proj.title }}</b>
+                      <span class="rounded bg-indigo-50 px-2 py-0.5 font-mono text-[10px] text-[#4a33e0] font-semibold">{{ proj.student_role || 'Developer' }}</span>
+                    </div>
+                    <p class="text-xs text-[#5a6177] mt-1">{{ proj.summary || proj.impact_description }}</p>
+                    @if (proj.github_url) {
+                      <div class="mt-2 text-xs font-mono text-[#4a33e0]">
+                        <a [href]="proj.github_url" target="_blank" class="hover:underline">GitHub Repository ↗</a>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Institutional Placement Compliance -->
+            <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
+              <h3 class="text-base font-bold text-[#12162b] mb-2">Institutional Placement Policy Compliance</h3>
+              <p class="text-xs text-[#5a6177] mb-3">
+                Students must adhere to the College Training & Placement Cell attendance, dress code, and interview acceptance guidelines.
+              </p>
+              <div class="flex items-center gap-3">
+                <span class="rounded bg-emerald-50 px-3 py-1 font-mono text-xs font-bold text-emerald-700">
+                  GOOD STANDING · {{ compliance()?.active_strikes ?? 0 }} STRIKES
+                </span>
+                <span class="text-xs text-[#8b91ad]">Maximum 2 strikes permitted before temporary placement disqualification.</span>
+              </div>
+            </div>
+          </section>
+        }
+      }
+    </main>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────── -->
+  <!-- MODAL / DRAWER: System Pre-Flight Check                      -->
+  <!-- ──────────────────────────────────────────────────────────── -->
+  @if (portal.activeDrawer(); as drawer) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div class="w-full max-w-lg rounded-2xl border border-[#e3e6ef] bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between border-b border-[#f0f2f8] pb-3 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🛡️</span>
+            <h3 class="text-base font-bold text-[#12162b]">System Pre-Flight Check</h3>
           </div>
           <button
             type="button"
-            (click)="portal.navigateToPage('grow', 'assess')"
-            class="rounded-lg bg-[#4a33e0] px-2.5 py-1.5 text-[12.5px] font-semibold text-white">
-            Start Test
+            (click)="portal.closeDrawer()"
+            class="rounded-lg p-1 text-[#8b91ad] hover:bg-[#f4f6fb] hover:text-[#12162b]">
+            ✕
           </button>
         </div>
-      </div>
 
-      <!-- Schedule & ERP Conflict Check -->
-      <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
-        <div class="mb-2.5 flex items-center justify-between">
-          <div>
-            <h2 class="m-0 text-[16.5px] font-bold text-[#12162b]">Schedule & ERP Conflict Check</h2>
-            <p class="text-[13px] text-[#5a6177]">Synced with Academic Timetable & Exam Cell</p>
+        <p class="text-xs text-[#5a6177] mb-4">
+          Verification protocol for online assessments, proctored coding rounds, and recruiter interviews.
+        </p>
+
+        <div class="space-y-3 mb-6">
+          <div class="flex items-center justify-between rounded-lg bg-emerald-50/60 border border-emerald-200 p-3">
+            <span class="text-xs font-semibold text-emerald-900">✓ Browser Security & Screen Lock</span>
+            <span class="text-xs font-mono font-bold text-emerald-700">PASSED</span>
           </div>
-          <span class="rounded-md bg-[#e6f6ef] px-2 py-0.5 text-xs font-semibold text-[#127a55]">
-            {{ conflicts()?.conflicting_events?.length ?? 0 }} Conflicts
-          </span>
-        </div>
-
-        <div class="mb-3 rounded-[10px] border border-[#ccebdd] bg-[#e6f6ef] px-3 py-2 text-[12.5px] text-[#127a55]">
-          <b>✓ Registrar Timetable Verified:</b> {{ conflicts()?.summary_message || 'No internal lab exams clash with your scheduled interviews.' }}
-        </div>
-
-        @for (ev of events(); track ev.id) {
-          <div class="flex items-center justify-between gap-3 border-t border-[#e3e6ef] py-3 first:border-t-0">
-            <div>
-              <div class="flex items-center gap-1.5">
-                <span class="rounded bg-[#eeebff] px-2 py-0.5 font-mono text-xs font-semibold text-[#4a33e0]">
-                  {{ ev.starts_at | date:'EEE dd MMM · HH:mm' }}
-                </span>
-                <b class="text-[14px]">{{ ev.title }}</b>
-              </div>
-              <div class="mt-0.5 text-[13px] text-[#5a6177]">{{ ev.subtitle || ev.event_type }}</div>
-            </div>
-            <button
-              type="button"
-              (click)="portal.openActionModalOrDrawer('preflight', ev)"
-              class="rounded-lg border border-[#e3e6ef] bg-white px-2.5 py-1 text-[12.5px] font-semibold hover:bg-[#f9fafc]">
-              Manage
-            </button>
+          <div class="flex items-center justify-between rounded-lg bg-emerald-50/60 border border-emerald-200 p-3">
+            <span class="text-xs font-semibold text-emerald-900">✓ Webcam & Audio Feed</span>
+            <span class="text-xs font-mono font-bold text-emerald-700">READY</span>
           </div>
-        }
-
-        <div class="mt-3 flex justify-between border-t border-[#e3e6ef] pt-3">
-          <button type="button" (click)="portal.showToast('Exported .ICS feed')" class="text-[13.5px] font-semibold text-[#4a33e0] hover:underline">
-            Export .ICS Calendar Feed
-          </button>
-          <button type="button" (click)="portal.navigateToPage('apps')" class="text-[13.5px] font-semibold text-[#4a33e0] hover:underline">
-            Open Full Pipeline →
-          </button>
+          <div class="flex items-center justify-between rounded-lg bg-emerald-50/60 border border-emerald-200 p-3">
+            <span class="text-xs font-semibold text-emerald-900">✓ Network Latency</span>
+            <span class="text-xs font-mono font-bold text-emerald-700">24ms (EXCELLENT)</span>
+          </div>
+          <div class="flex items-center justify-between rounded-lg bg-emerald-50/60 border border-emerald-200 p-3">
+            <span class="text-xs font-semibold text-emerald-900">✓ Institutional PRN Token</span>
+            <span class="text-xs font-mono font-bold text-emerald-700">VALIDATED</span>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- High-Match Active Drives -->
-    <div class="rounded-xl border border-[#e3e6ef] bg-white p-5 shadow-sm">
-      <div class="mb-2 flex items-center justify-between">
-        <div>
-          <h2 class="m-0 text-[16.5px] font-bold">High-Match Active Drives</h2>
-          <p class="text-[13px] text-[#5a6177]">Pre-screened against your verified {{ portal.studentDisplayInfo().cgpa }} CGPA and zero backlogs.</p>
-        </div>
-        <button type="button" (click)="portal.navigateToPage('jobs')" class="text-[13.5px] font-semibold text-[#4a33e0] hover:underline">
-          Explore all {{ portal.totalOpenJobsCount() }} drives →
+        <button
+          type="button"
+          (click)="portal.closeDrawer()"
+          class="w-full rounded-xl bg-[#4a33e0] py-2.5 text-xs font-semibold text-white shadow-sm hover:brightness-110">
+          Confirm & Close Pre-Flight
         </button>
       </div>
-
-      @for (job of priorityDrives(); track job.id) {
-        <div class="mt-3 flex flex-wrap items-center justify-between gap-3.5 border-t border-[#e3e6ef] pt-3 first:border-t-0 first:pt-0">
-          <div>
-            <div class="flex flex-wrap items-center gap-2">
-              <b class="font-semibold">{{ job.title }} · {{ job.company_name }}</b>
-              @if (job.tier_label) {
-                <span class="rounded bg-[#eeebff] px-2 py-0.5 text-xs font-semibold text-[#4a33e0]">{{ job.tier_label }}</span>
-              }
-            </div>
-            <div class="text-[13px] text-[#5a6177]">
-              {{ job.location }} · ₹{{ (job.total_ctc / 100000) | number:'1.0-1' }} LPA · Job ID:
-              <span class="font-mono text-xs">{{ job.job_code || job.id.slice(0, 8) }}</span>
-            </div>
-          </div>
-          <div class="flex items-center gap-3.5">
-            @if (job.match_score) {
-              <div class="text-right text-lg font-bold leading-none text-[#4a33e0]">
-                {{ job.match_score }}%<small class="block text-[11.5px] font-medium text-[#5a6177]">match</small>
-              </div>
-            }
-            <button
-              type="button"
-              (click)="portal.navigateToPage('jobs')"
-              class="rounded-lg bg-[#4a33e0] px-3 py-1.5 text-[12.5px] font-semibold text-white">
-              Inspect & Apply
-            </button>
-          </div>
-        </div>
-      }
     </div>
-  </div>
-</section>
-    </main>
-  </div>
+  }
+
+  <!-- ──────────────────────────────────────────────────────────── -->
+  <!-- MODAL: Command Palette (⌘K)                                  -->
+  <!-- ──────────────────────────────────────────────────────────── -->
+  @if (portal.isCommandPaletteOpen()) {
+    <div class="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm pt-20 p-4" (click)="portal.closeCommandPalette()">
+      <div class="w-full max-w-lg rounded-2xl border border-[#e3e6ef] bg-white p-4 shadow-2xl" (click)="$event.stopPropagation()">
+        <div class="mb-3 flex items-center gap-2 border-b border-[#f0f2f8] pb-3">
+          <span class="text-sm text-[#8b91ad]">🔍</span>
+          <input
+            type="text"
+            class="flex-1 text-sm text-[#12162b] focus:outline-none"
+            placeholder="Search portal or jump to page... (Esc to close)"
+            autofocus
+            (keyup.escape)="portal.closeCommandPalette()"
+          />
+        </div>
+        <div class="space-y-1">
+          <button
+            type="button"
+            (click)="portal.navigateToPage('home'); portal.closeCommandPalette()"
+            class="w-full text-left rounded-lg p-2.5 text-xs font-medium text-[#12162b] hover:bg-[#f4f6fb] flex items-center justify-between">
+            <span>🏠 Command Center</span>
+            <span class="text-[11px] text-[#8b91ad]">Jump</span>
+          </button>
+          <button
+            type="button"
+            (click)="portal.navigateToPage('jobs'); portal.closeCommandPalette()"
+            class="w-full text-left rounded-lg p-2.5 text-xs font-medium text-[#12162b] hover:bg-[#f4f6fb] flex items-center justify-between">
+            <span>💼 Placement Drives</span>
+            <span class="text-[11px] text-[#8b91ad]">Jump</span>
+          </button>
+          <button
+            type="button"
+            (click)="portal.navigateToPage('apps'); portal.closeCommandPalette()"
+            class="w-full text-left rounded-lg p-2.5 text-xs font-medium text-[#12162b] hover:bg-[#f4f6fb] flex items-center justify-between">
+            <span>📄 Applications & Offers</span>
+            <span class="text-[11px] text-[#8b91ad]">Jump</span>
+          </button>
+          <button
+            type="button"
+            (click)="portal.navigateToPage('grow'); portal.closeCommandPalette()"
+            class="w-full text-left rounded-lg p-2.5 text-xs font-medium text-[#12162b] hover:bg-[#f4f6fb] flex items-center justify-between">
+            <span>🌱 Skills & Growth</span>
+            <span class="text-[11px] text-[#8b91ad]">Jump</span>
+          </button>
+          <button
+            type="button"
+            (click)="portal.navigateToPage('people'); portal.closeCommandPalette()"
+            class="w-full text-left rounded-lg p-2.5 text-xs font-medium text-[#12162b] hover:bg-[#f4f6fb] flex items-center justify-between">
+            <span>👥 Alumni Network</span>
+            <span class="text-[11px] text-[#8b91ad]">Jump</span>
+          </button>
+          <button
+            type="button"
+            (click)="portal.navigateToPage('msgs'); portal.closeCommandPalette()"
+            class="w-full text-left rounded-lg p-2.5 text-xs font-medium text-[#12162b] hover:bg-[#f4f6fb] flex items-center justify-between">
+            <span>💬 TACIE AI Copilot</span>
+            <span class="text-[11px] text-[#8b91ad]">Jump</span>
+          </button>
+          <button
+            type="button"
+            (click)="portal.openActionModalOrDrawer('tpo-governance'); portal.closeCommandPalette()"
+            class="w-full text-left rounded-lg p-2.5 text-xs font-bold text-[#4a33e0] bg-[#eef0ff] hover:bg-[#e2e5ff] flex items-center justify-between">
+            <span>🏛️ Switch to TPO Admin Console ↗</span>
+            <span class="text-[11px]">Admin</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

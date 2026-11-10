@@ -891,6 +891,7 @@ Canonical AI entities include:
 
 ```text
 AI_RUN
+AI_USAGE_RECORD
 RESUME_ANALYSIS
 CANDIDATE_SEARCH
 CANDIDATE_MATCH_RUN
@@ -910,6 +911,9 @@ TACIE must never:
 - accept an offer
 - invent project/resume metrics
 - silently rewrite verified data
+
+`AI_USAGE_RECORD` is written only by the Node API after it calls the stateless
+AI framework. The AI framework has no database credentials or persistence path.
 
 ## 0.34 AI credit/quota management — NEW
 
@@ -1306,6 +1310,7 @@ SAVED_ITEM
 
 ```text
 AI_RUN
+AI_USAGE_RECORD
 RESUME_ANALYSIS
 CANDIDATE_SEARCH
 CANDIDATE_MATCH_RUN

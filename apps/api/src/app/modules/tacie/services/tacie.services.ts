@@ -5,6 +5,7 @@ import { InvalidServiceInputError } from "../../services/service.errors";
 import {
   AiCreditEvent,
   AiRun,
+  AiUsageRecord,
   AiUsageQuota,
   CandidateMatchResult,
   CandidateMatchRun,
@@ -17,6 +18,9 @@ import {
 
 export class AiRunService extends MutableService<AiRun> {
   constructor() { super(AiRun); }
+}
+export class AiUsageRecordService extends CreateReadService<AiUsageRecord> {
+  constructor() { super(AiUsageRecord); }
 }
 export class ResumeAnalysisService extends CreateReadService<ResumeAnalysis> {
   constructor() { super(ResumeAnalysis); }

@@ -4,6 +4,33 @@ import * as path from 'path';
 import config from './config';
 import { sequelize } from './database';
 
+const AI_USAGE_RECORDS_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS ai_usage_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_id UUID NOT NULL UNIQUE,
+    client_id VARCHAR(128) NOT NULL,
+    application_id VARCHAR(256),
+    signature_type VARCHAR(128) NOT NULL,
+    provider VARCHAR(64) NOT NULL,
+    model_name VARCHAR(256) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    total_tokens INTEGER,
+    latency_ms INTEGER NOT NULL,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    error_code VARCHAR(128),
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS ai_usage_records_client_created
+    ON ai_usage_records (client_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS ai_usage_records_signature_created
+    ON ai_usage_records (signature_type, created_at DESC);
+  CREATE INDEX IF NOT EXISTS ai_usage_records_status_created
+    ON ai_usage_records (status, created_at DESC);
+`;
+
 function getClient(database = config.DB_NAME): Client {
   return new Client({
     user: config.DB_USER,
@@ -81,6 +108,7 @@ export async function provisionTenantDatabase(databaseName: string, tenantData?:
     } else {
       console.log(`[DB Provisioner] Database "${databaseName}" already initialized with ${tableRes.rows[0].cnt} tables.`);
     }
+    await tenantClient.query(AI_USAGE_RECORDS_SCHEMA_SQL);
     return true;
   } catch (err: any) {
     console.error(`[DB Provisioner] Error initializing schema for "${databaseName}":`, err.message);
@@ -106,6 +134,7 @@ export async function verifyAndInitializeDatabases(): Promise<void> {
     // 1. Extensions
     await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
     await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
+    await client.query(AI_USAGE_RECORDS_SCHEMA_SQL);
 
     // 2. Control Plane Tables
     await client.query(`

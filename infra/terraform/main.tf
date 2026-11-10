@@ -369,6 +369,8 @@ resource "aws_ecs_task_definition" "api" {
       { name = "DB_NAME", value = var.db_name },
       { name = "DB_USER", value = var.db_username },
       { name = "DB_DIALECT", value = "postgres" },
+      { name = "DB_SSL", value = "true" },
+      { name = "DB_SSL_REJECT_UNAUTHORIZED", value = "false" },
       { name = "DB_SYNC", value = "false" },
       { name = "AI_SERVICE_URL", value = "http://ai-framework.${var.project_name}.local:8000" },
     ]
@@ -416,18 +418,11 @@ resource "aws_ecs_task_definition" "ai" {
     portMappings = [{ containerPort = 8000, hostPort = 8000, protocol = "tcp" }]
     environment = [
       { name = "APP_ENV", value = "production" },
-      { name = "AURORA_DB_HOST", value = aws_db_instance.postgres.address },
-      { name = "AURORA_DB_PORT", value = "5432" },
-      { name = "AURORA_DB_NAME", value = var.db_name },
-      { name = "AURORA_DB_USER", value = var.db_username },
-      { name = "AURORA_DB_SSLMODE", value = "require" },
-      { name = "AURORA_DB_REGION", value = var.aws_region },
       { name = "LLM_PROVIDER", value = "bedrock" },
       { name = "BEDROCK_REGION", value = var.bedrock_region },
       { name = "BEDROCK_MODEL", value = var.bedrock_model },
     ]
     secrets = [
-      { name = "AURORA_DB_PASSWORD", valueFrom = "${aws_secretsmanager_secret.database.arn}:password::" },
       { name = "AI_SERVICE_API_KEYS", valueFrom = "${aws_secretsmanager_secret.ai.arn}:api_keys::" },
       { name = "BEDROCK_API_KEY", valueFrom = "${aws_secretsmanager_secret.ai.arn}:bedrock_api_key::" },
     ]

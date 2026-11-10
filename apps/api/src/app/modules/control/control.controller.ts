@@ -79,9 +79,10 @@ export async function resolveTenant(req: Request, res: Response) {
       message: `No institution found with college code or identifier "${code}". Please verify your 4-digit code.`,
     });
   } catch (err: any) {
+    console.error("[TenantResolution] Failed to resolve tenant:", err);
     return res.status(500).json({
       success: false,
-      error: err?.message || err,
+      error: "TENANT_RESOLUTION_FAILED",
       message: "Internal Server Error during tenant resolution",
     });
   }

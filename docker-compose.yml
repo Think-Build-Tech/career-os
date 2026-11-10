@@ -43,6 +43,7 @@ services:
       DB_USER: "postgres"
       DB_PASSWORD: "admin"
       DB_DIALECT: "postgres"
+      DB_SSL: "false"
       DB_SYNC: "false"
       AI_SERVICE_URL: "http://ai-framework:8000"
       AI_SERVICE_API_KEY: "local-dev-careeros-ai-token"

@@ -38,6 +38,12 @@ function getClient(database = config.DB_NAME): Client {
     database,
     password: config.DB_PASSWORD,
     port: config.DB_PORT,
+    ssl: config.DB_SSL
+      ? {
+          rejectUnauthorized: config.DB_SSL_REJECT_UNAUTHORIZED,
+          ...(config.DB_SSL_CA ? { ca: config.DB_SSL_CA } : {}),
+        }
+      : false,
   });
 }
 

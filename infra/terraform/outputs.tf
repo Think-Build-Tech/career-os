@@ -25,3 +25,15 @@ output "ecs_cluster" {
 output "rds_endpoint" {
   value = aws_db_instance.postgres.address
 }
+
+output "database_seed_task_definition" {
+  value = aws_ecs_task_definition.database_seed.arn
+}
+
+output "private_subnet_ids" {
+  value = aws_subnet.private[*].id
+}
+
+output "ecs_security_group_id" {
+  value = aws_security_group.ecs.id
+}

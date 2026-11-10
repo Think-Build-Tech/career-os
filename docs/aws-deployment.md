@@ -70,7 +70,10 @@ Secrets:
 - `AWS_DEPLOY_ROLE_ARN`
 - `TF_VAR_DB_PASSWORD`
 - `TF_VAR_AI_SERVICE_API_KEY`
+- `TF_VAR_AUTH_TOKEN_SECRET`
 - `TF_VAR_BEDROCK_API_KEY`
+- `SEED_ADMIN_PASSWORD` (at least 12 characters)
+- `SEED_USER_PASSWORD` (at least 12 characters)
 
 Variables:
 
@@ -80,6 +83,21 @@ Variables:
 - `TF_VAR_BEDROCK_MODEL`
 
 After that, every push to `dev` runs `.github/workflows/deploy.yml`. Pull requests and pushes also run `.github/workflows/ci.yml`.
+
+## Seed the development database once
+
+The seed is deliberately opt-in so ordinary pushes cannot reset development
+records. It runs as a one-off ECS Fargate task in the private subnets and uses
+the RDS credentials stored in Secrets Manager.
+
+1. Push these deployment changes to `dev`.
+2. Open GitHub **Actions** and select **Deploy CareerOS to AWS**.
+3. Select **Run workflow**, choose the `dev` branch, and enable **Seed the development database**.
+4. Run the workflow and verify that the **Seed development database** step reports `exit_code=0`.
+
+The script is deterministic and transactional. Re-running it updates the same
+seed records instead of creating duplicates, but it can restore seeded values,
+so leave the checkbox disabled for normal deployments.
 
 ## Operational notes
 

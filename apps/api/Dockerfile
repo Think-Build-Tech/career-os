@@ -12,6 +12,7 @@ RUN corepack enable && corepack prepare pnpm@11.14.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
 COPY apps/api ./apps/api
 COPY libs ./libs
+COPY tools/scripts/seed_database.js ./tools/scripts/seed_database.js
 
 # Install all workspace dependencies
 RUN pnpm install --frozen-lockfile
@@ -34,6 +35,7 @@ ENV HOST=0.0.0.0
 COPY --from=builder /app/dist/apps/api ./dist/apps/api
 COPY --from=builder /app/apps/api/src/app/config/schema.sql ./dist/apps/api/schema.sql
 COPY --from=builder /app/apps/api/src/app/config/schema.sql /app/schema.sql
+COPY --from=builder /app/tools/scripts/seed_database.js ./dist/apps/api/seed_database.js
 
 # Nx generates a pruned package manifest for the bundled API. Install only the
 # runtime dependencies beside the built entrypoint; the source workspace is

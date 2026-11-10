@@ -2,6 +2,12 @@ name: Deploy CareerOS to AWS
 
 on:
   workflow_dispatch:
+    inputs:
+      seed_database:
+        description: Seed the development database with the deterministic CareerOS dataset
+        required: false
+        type: boolean
+        default: false
   push:
     branches: [dev]
 
@@ -37,6 +43,18 @@ jobs:
         with:
           terraform_version: 1.9.8
 
+      - name: Validate requested seed credentials
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_database }}
+        shell: bash
+        env:
+          SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
+          SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
+        run: |
+          if [[ ${#SEED_ADMIN_PASSWORD} -lt 12 || ${#SEED_USER_PASSWORD} -lt 12 ]]; then
+            echo "SEED_ADMIN_PASSWORD and SEED_USER_PASSWORD must both exist in the Dev environment and contain at least 12 characters."
+            exit 1
+          fi
+
       - name: Initialize Terraform backend
         working-directory: infra/terraform
         run: >-
@@ -53,6 +71,8 @@ jobs:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
           TF_VAR_auth_token_secret: ${{ secrets.TF_VAR_AUTH_TOKEN_SECRET }}
+          TF_VAR_seed_admin_password: ${{ secrets.SEED_ADMIN_PASSWORD }}
+          TF_VAR_seed_user_password: ${{ secrets.SEED_USER_PASSWORD }}
           TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}
           TF_VAR_bedrock_model: ${{ vars.TF_VAR_BEDROCK_MODEL }}
         shell: bash
@@ -86,9 +106,47 @@ jobs:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
           TF_VAR_auth_token_secret: ${{ secrets.TF_VAR_AUTH_TOKEN_SECRET }}
+          TF_VAR_seed_admin_password: ${{ secrets.SEED_ADMIN_PASSWORD }}
+          TF_VAR_seed_user_password: ${{ secrets.SEED_USER_PASSWORD }}
           TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}
           TF_VAR_bedrock_model: ${{ vars.TF_VAR_BEDROCK_MODEL }}
         run: terraform apply -auto-approve -input=false -var="environment=${ENVIRONMENT}" -var="image_tag=${{ github.sha }}-${{ github.run_attempt }}" -var="desired_count=1"
+
+      - name: Seed development database
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_database }}
+        working-directory: infra/terraform
+        shell: bash
+        run: |
+          CLUSTER=$(terraform output -raw ecs_cluster)
+          TASK_DEFINITION=$(terraform output -raw database_seed_task_definition)
+          SUBNETS=$(terraform output -json private_subnet_ids | jq -r 'join(",")')
+          SECURITY_GROUP=$(terraform output -raw ecs_security_group_id)
+
+          RUN_RESULT=$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "$TASK_DEFINITION" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUP],assignPublicIp=DISABLED}")
+          TASK_ARN=$(jq -r '.tasks[0].taskArn // empty' <<<"$RUN_RESULT")
+
+          if [[ -z "$TASK_ARN" ]]; then
+            echo "ECS did not start the database seed task."
+            jq '{failures: .failures}' <<<"$RUN_RESULT"
+            exit 1
+          fi
+
+          echo "Waiting for database seed task: $TASK_ARN"
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN"
+
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --query 'tasks[0].containers[?name==`database-seed`].exitCode | [0]' --output text)
+          STOPPED_REASON=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --query 'tasks[0].stoppedReason' --output text)
+          echo "Database seed task exit_code=$EXIT_CODE reason=$STOPPED_REASON"
+
+          if [[ "$EXIT_CODE" != "0" ]]; then
+            aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --output json
+            aws logs tail "/ecs/${PROJECT_NAME}-${ENVIRONMENT}/api" --since 15m --format short || true
+            exit 1
+          fi
 
       - name: Wait for ECS services
         working-directory: infra/terraform

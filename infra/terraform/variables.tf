@@ -43,6 +43,28 @@ variable "auth_token_secret" {
   sensitive = true
 }
 
+variable "seed_admin_password" {
+  type      = string
+  sensitive = true
+  default   = ""
+
+  validation {
+    condition     = var.seed_admin_password == "" || length(var.seed_admin_password) >= 12
+    error_message = "seed_admin_password must be empty or contain at least 12 characters."
+  }
+}
+
+variable "seed_user_password" {
+  type      = string
+  sensitive = true
+  default   = ""
+
+  validation {
+    condition     = var.seed_user_password == "" || length(var.seed_user_password) >= 12
+    error_message = "seed_user_password must be empty or contain at least 12 characters."
+  }
+}
+
 variable "bedrock_api_key" {
   type      = string
   sensitive = true

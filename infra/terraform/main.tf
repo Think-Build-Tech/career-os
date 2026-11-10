@@ -192,6 +192,19 @@ resource "aws_secretsmanager_secret_version" "ai" {
   })
 }
 
+resource "aws_secretsmanager_secret" "database_seed" {
+  name                    = "${local.name}/database-seed"
+  recovery_window_in_days = 7
+}
+
+resource "aws_secretsmanager_secret_version" "database_seed" {
+  secret_id = aws_secretsmanager_secret.database_seed.id
+  secret_string = jsonencode({
+    admin_password = var.seed_admin_password
+    user_password  = var.seed_user_password
+  })
+}
+
 # Database --------------------------------------------------------------------
 resource "aws_db_subnet_group" "main" {
   name       = replace(local.name, "_", "-")
@@ -283,7 +296,11 @@ resource "aws_iam_role_policy" "ecs_secrets" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["secretsmanager:GetSecretValue"]
-      Resource = [aws_secretsmanager_secret.database.arn, aws_secretsmanager_secret.ai.arn]
+      Resource = [
+        aws_secretsmanager_secret.database.arn,
+        aws_secretsmanager_secret.ai.arn,
+        aws_secretsmanager_secret.database_seed.arn,
+      ]
     }]
   })
 }
@@ -381,6 +398,46 @@ resource "aws_ecs_task_definition" "api" {
     ]
     healthCheck = { command = ["CMD-SHELL", "wget -qO- http://localhost:5000/api/health || exit 1"], interval = 30, timeout = 5, retries = 3, startPeriod = 60 }
     logConfiguration = { logDriver = "awslogs", options = local.log_options_api }
+  }])
+}
+
+# Opt-in, one-off task used by the development deployment workflow. It runs in
+# the private VPC and receives credentials from Secrets Manager, so RDS never
+# needs to be exposed to a GitHub-hosted runner.
+resource "aws_ecs_task_definition" "database_seed" {
+  family                   = "${local.name}-database-seed"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = 512
+  memory                   = 1024
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([{
+    name      = "database-seed"
+    image     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
+    essential = true
+    command   = ["node", "dist/apps/api/seed_database.js"]
+    environment = [
+      { name = "NODE_ENV", value = "production" },
+      { name = "DB_HOST", value = aws_db_instance.postgres.address },
+      { name = "DB_PORT", value = "5432" },
+      { name = "DB_NAME", value = var.db_name },
+      { name = "DB_USER", value = var.db_username },
+      { name = "DB_SSL", value = "true" },
+      { name = "DB_SSL_REJECT_UNAUTHORIZED", value = "false" },
+      { name = "SEED_CONFIRM_DB", value = var.db_name },
+      { name = "SEED_APPLY_SCHEMA", value = "true" },
+    ]
+    secrets = [
+      { name = "DB_PASSWORD", valueFrom = "${aws_secretsmanager_secret.database.arn}:password::" },
+      { name = "SEED_ADMIN_PASSWORD", valueFrom = "${aws_secretsmanager_secret.database_seed.arn}:admin_password::" },
+      { name = "SEED_USER_PASSWORD", valueFrom = "${aws_secretsmanager_secret.database_seed.arn}:user_password::" },
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options   = merge(local.log_options_api, { "awslogs-stream-prefix" = "seed" })
+    }
   }])
 }
 

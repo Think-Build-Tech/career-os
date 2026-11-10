@@ -70,8 +70,12 @@ async function ensureSchema(client) {
   if (!APPLY_SCHEMA) {
     throw new Error('Database schema is missing and SEED_APPLY_SCHEMA=false. Start the API once or enable schema application.');
   }
-  const schemaPath = path.resolve(process.cwd(), 'apps/api/src/app/config/schema.sql');
-  if (!fs.existsSync(schemaPath)) throw new Error(`Schema file not found: ${schemaPath}`);
+  const schemaPath = [
+    path.resolve(process.cwd(), 'apps/api/src/app/config/schema.sql'),
+    path.resolve(process.cwd(), 'schema.sql'),
+    '/app/schema.sql',
+  ].find((candidate) => fs.existsSync(candidate));
+  if (!schemaPath) throw new Error('Schema file not found in the workspace or API container.');
   console.log(`[seed] Applying schema to empty database ${DB_NAME}...`);
   await client.query(fs.readFileSync(schemaPath, 'utf8'));
 }

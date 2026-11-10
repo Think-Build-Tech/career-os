@@ -159,7 +159,7 @@ jobs:
             exit 1
           fi
 
-          aws s3api put-object --bucket "$SEED_MARKER_BUCKET" --key "$MARKER_KEY" --body /dev/null >/dev/null
+          aws s3api put-object --bucket "$SEED_MARKER_BUCKET" --key "$MARKER_KEY" >/dev/null
           echo "Database seed completed and one-time marker s3://$SEED_MARKER_BUCKET/$MARKER_KEY was created."
 
       - name: Wait for ECS services

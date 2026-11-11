@@ -86,6 +86,11 @@ Variables:
 
 After that, every push to `dev` runs `.github/workflows/deploy.yml`. Pull requests and pushes also run `.github/workflows/ci.yml`.
 
+`TF_VAR_AUTH_TOKEN_SECRET` is required only for the first infrastructure
+bootstrap and must contain at least 32 characters. Once the AI secret exists,
+the deployment reads the current signing secret from AWS Secrets Manager so a
+later missing or stale GitHub secret cannot overwrite it.
+
 ## Seed the development database once
 
 The next push to `dev` runs the seed as a one-off ECS Fargate task in the

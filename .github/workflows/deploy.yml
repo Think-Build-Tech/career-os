@@ -45,6 +45,34 @@ jobs:
         with:
           terraform_version: 1.9.8
 
+      - name: Load authentication signing secret
+        shell: bash
+        env:
+          BOOTSTRAP_AUTH_TOKEN_SECRET: ${{ secrets.TF_VAR_AUTH_TOKEN_SECRET }}
+        run: |
+          set -euo pipefail
+          SECRET_ID="${PROJECT_NAME}-${ENVIRONMENT}/ai"
+          AUTH_TOKEN_SECRET=""
+
+          if SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "$SECRET_ID" \
+            --query SecretString \
+            --output text 2>/dev/null); then
+            AUTH_TOKEN_SECRET=$(jq -r '.auth_token_secret // empty' <<<"$SECRET_JSON" 2>/dev/null || true)
+          fi
+
+          if (( ${#AUTH_TOKEN_SECRET} < 32 )); then
+            AUTH_TOKEN_SECRET="$BOOTSTRAP_AUTH_TOKEN_SECRET"
+          fi
+
+          if (( ${#AUTH_TOKEN_SECRET} < 32 )); then
+            echo "AUTH_TOKEN_SECRET must contain at least 32 characters in either AWS Secrets Manager or the GitHub Dev environment." >&2
+            exit 1
+          fi
+
+          echo "::add-mask::$AUTH_TOKEN_SECRET"
+          echo "TF_VAR_auth_token_secret=$AUTH_TOKEN_SECRET" >> "$GITHUB_ENV"
+
       - name: Initialize Terraform backend
         working-directory: infra/terraform
         run: >-
@@ -60,7 +88,6 @@ jobs:
         env:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
-          TF_VAR_auth_token_secret: ${{ secrets.TF_VAR_AUTH_TOKEN_SECRET }}
           TF_VAR_seed_admin_password: ${{ secrets.SEED_ADMIN_PASSWORD }}
           TF_VAR_seed_user_password: ${{ secrets.SEED_USER_PASSWORD }}
           TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}
@@ -95,7 +122,6 @@ jobs:
         env:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_ai_service_api_key: ${{ secrets.TF_VAR_AI_SERVICE_API_KEY }}
-          TF_VAR_auth_token_secret: ${{ secrets.TF_VAR_AUTH_TOKEN_SECRET }}
           TF_VAR_seed_admin_password: ${{ secrets.SEED_ADMIN_PASSWORD }}
           TF_VAR_seed_user_password: ${{ secrets.SEED_USER_PASSWORD }}
           TF_VAR_bedrock_api_key: ${{ secrets.TF_VAR_BEDROCK_API_KEY }}

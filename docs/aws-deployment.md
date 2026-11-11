@@ -81,6 +81,8 @@ Variables:
 - `TF_STATE_BUCKET`
 - `TF_STATE_LOCK_TABLE`
 - `TF_VAR_BEDROCK_MODEL`
+- `PUBLIC_HOSTNAME` (defaults to `dev-careeros.thinkbuild.in`)
+- `TLS_CERTIFICATE_ARN` (add this only after the ACM certificate is issued)
 
 After that, every push to `dev` runs `.github/workflows/deploy.yml`. Pull requests and pushes also run `.github/workflows/ci.yml`.
 
@@ -96,9 +98,45 @@ After this workflow also exists on the default branch, a manual deployment can
 enable **Seed the development database** to deliberately run the idempotent seed
 again regardless of the marker.
 
+## Connect `dev-careeros.thinkbuild.in`
+
+The domain can stay registered outside AWS. The certificate must be requested in
+the same AWS region as the Application Load Balancer (`ap-south-1` by default),
+while the two required CNAME records must be created at the domain's
+**authoritative DNS provider**.
+
+1. In AWS Certificate Manager in `ap-south-1`, request a public certificate for
+   `dev-careeros.thinkbuild.in` using DNS validation.
+2. Copy the ACM validation CNAME name and value into the authoritative DNS zone.
+   Keep this record after validation so ACM can renew the certificate.
+3. Create the application CNAME:
+
+   | Type | Name | Target |
+   | --- | --- | --- |
+   | `CNAME` | `dev-careeros` | Value from `terraform output -raw load_balancer_dns_name` |
+
+   Enter only `dev-careeros` in DNS editors that append `thinkbuild.in`
+   automatically. Do not use the ALB's changing IP addresses in an `A` record.
+4. Wait until ACM shows the certificate as **Issued**.
+5. Add the issued certificate ARN as the `TLS_CERTIFICATE_ARN` variable in the
+   GitHub `Dev` environment, then run the deployment workflow (or push to
+   `dev`). Terraform creates the HTTPS listener and redirects HTTP to HTTPS.
+6. Verify both the web app and API:
+
+   ```powershell
+   curl.exe -I https://dev-careeros.thinkbuild.in/
+   curl.exe --fail https://dev-careeros.thinkbuild.in/api/health
+   ```
+
+If Hostinger reports that the domain points elsewhere by nameservers, create the
+records at the provider named by those nameservers instead. Changing the whole
+domain's nameservers is not required and could disrupt the main site or email.
+
 ## Operational notes
 
 - Replace the placeholder Bedrock model/key before enabling TACIE generation.
 - The RDS password and AI credentials are injected from Secrets Manager; they are not placed in container images.
 - The development default disables RDS automated backups (`db_backup_retention_period = 0`) because some AWS Free Tier accounts reject non-zero retention. Set `db_backup_retention_period = 7`, enable `db_multi_az`, and enable `enable_deletion_protection` for a production workload after validating the environment.
-- The current ALB listener is HTTP on port 80. Add an ACM certificate and HTTPS listener before exposing real student data publicly.
+- Without `TLS_CERTIFICATE_ARN`, the ALB stays on HTTP to support the initial
+  infrastructure bootstrap. Public environments should always set an issued
+  ACM certificate ARN so port 80 redirects to HTTPS.

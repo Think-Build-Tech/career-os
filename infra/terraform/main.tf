@@ -3,8 +3,9 @@ data "aws_availability_zones" "available" {
 }
 
 locals {
-  name = "${var.project_name}-${var.environment}"
-  azs  = slice(data.aws_availability_zones.available.names, 0, 2)
+  name          = "${var.project_name}-${var.environment}"
+  azs           = slice(data.aws_availability_zones.available.names, 0, 2)
+  https_enabled = trimspace(var.tls_certificate_arn) != ""
 }
 
 # Network ---------------------------------------------------------------------
@@ -38,7 +39,7 @@ resource "aws_route_table" "public" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id 
+    gateway_id = aws_internet_gateway.main.id
   }
 }
 
@@ -83,6 +84,14 @@ resource "aws_security_group" "alb" {
     description = "HTTP"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -185,9 +194,9 @@ resource "aws_secretsmanager_secret" "ai" {
 resource "aws_secretsmanager_secret_version" "ai" {
   secret_id = aws_secretsmanager_secret.ai.id
   secret_string = jsonencode({
-    api_key         = var.ai_service_api_key
-    api_keys        = "careeros-api=${var.ai_service_api_key}"
-    bedrock_api_key = var.bedrock_api_key
+    api_key           = var.ai_service_api_key
+    api_keys          = "careeros-api=${var.ai_service_api_key}"
+    bedrock_api_key   = var.bedrock_api_key
     auth_token_secret = var.auth_token_secret
   })
 }
@@ -294,8 +303,8 @@ resource "aws_iam_role_policy" "ecs_secrets" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["secretsmanager:GetSecretValue"]
+      Effect = "Allow"
+      Action = ["secretsmanager:GetSecretValue"]
       Resource = [
         aws_secretsmanager_secret.database.arn,
         aws_secretsmanager_secret.ai.arn,
@@ -373,9 +382,9 @@ resource "aws_ecs_task_definition" "api" {
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([{
-    name      = "api"
-    image     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
-    essential = true
+    name         = "api"
+    image        = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
+    essential    = true
     portMappings = [{ containerPort = 5000, hostPort = 5000, protocol = "tcp" }]
     environment = [
       { name = "NODE_ENV", value = "production" },
@@ -396,7 +405,7 @@ resource "aws_ecs_task_definition" "api" {
       { name = "AI_SERVICE_API_KEY", valueFrom = "${aws_secretsmanager_secret.ai.arn}:api_key::" },
       { name = "AUTH_TOKEN_SECRET", valueFrom = "${aws_secretsmanager_secret.ai.arn}:auth_token_secret::" },
     ]
-    healthCheck = { command = ["CMD-SHELL", "wget -qO- http://localhost:5000/api/health || exit 1"], interval = 30, timeout = 5, retries = 3, startPeriod = 60 }
+    healthCheck      = { command = ["CMD-SHELL", "wget -qO- http://localhost:5000/api/health || exit 1"], interval = 30, timeout = 5, retries = 3, startPeriod = 60 }
     logConfiguration = { logDriver = "awslogs", options = local.log_options_api }
   }])
 }
@@ -450,11 +459,11 @@ resource "aws_ecs_task_definition" "web" {
   execution_role_arn       = aws_iam_role.ecs_execution.arn
 
   container_definitions = jsonencode([{
-    name = "web"
-    image = "${aws_ecr_repository.web.repository_url}:${var.image_tag}"
-    essential = true
-    portMappings = [{ containerPort = 80, hostPort = 80, protocol = "tcp" }]
-    healthCheck = { command = ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"], interval = 30, timeout = 5, retries = 3, startPeriod = 30 }
+    name             = "web"
+    image            = "${aws_ecr_repository.web.repository_url}:${var.image_tag}"
+    essential        = true
+    portMappings     = [{ containerPort = 80, hostPort = 80, protocol = "tcp" }]
+    healthCheck      = { command = ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"], interval = 30, timeout = 5, retries = 3, startPeriod = 30 }
     logConfiguration = { logDriver = "awslogs", options = local.log_options_web }
   }])
 }
@@ -469,9 +478,9 @@ resource "aws_ecs_task_definition" "ai" {
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([{
-    name = "ai-framework"
-    image = "${aws_ecr_repository.ai.repository_url}:${var.image_tag}"
-    essential = true
+    name         = "ai-framework"
+    image        = "${aws_ecr_repository.ai.repository_url}:${var.image_tag}"
+    essential    = true
     portMappings = [{ containerPort = 8000, hostPort = 8000, protocol = "tcp" }]
     environment = [
       { name = "APP_ENV", value = "production" },
@@ -524,6 +533,32 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
+  depends_on        = [aws_lb_listener.https]
+
+  default_action {
+    type             = local.https_enabled ? "redirect" : "forward"
+    target_group_arn = local.https_enabled ? null : aws_lb_target_group.web.arn
+
+    dynamic "redirect" {
+      for_each = local.https_enabled ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  }
+}
+
+resource "aws_lb_listener" "https" {
+  count = local.https_enabled ? 1 : 0
+
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  certificate_arn   = var.tls_certificate_arn
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.web.arn
@@ -531,7 +566,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener_rule" "api" {
-  listener_arn = aws_lb_listener.http.arn
+  listener_arn = local.https_enabled ? aws_lb_listener.https[0].arn : aws_lb_listener.http.arn
   priority     = 10
   action {
     type             = "forward"
@@ -552,8 +587,8 @@ resource "aws_ecs_service" "web" {
   launch_type     = "FARGATE"
   depends_on      = [aws_lb_listener.http, aws_ecs_service.api]
   network_configuration {
-    subnets          = aws_subnet.private[*].id
-    security_groups  = [aws_security_group.ecs.id]
+    subnets         = aws_subnet.private[*].id
+    security_groups = [aws_security_group.ecs.id]
   }
   load_balancer {
     target_group_arn = aws_lb_target_group.web.arn
@@ -570,8 +605,8 @@ resource "aws_ecs_service" "api" {
   launch_type     = "FARGATE"
   depends_on      = [aws_lb_listener_rule.api]
   network_configuration {
-    subnets          = aws_subnet.private[*].id
-    security_groups  = [aws_security_group.ecs.id]
+    subnets         = aws_subnet.private[*].id
+    security_groups = [aws_security_group.ecs.id]
   }
   load_balancer {
     target_group_arn = aws_lb_target_group.api.arn
@@ -590,8 +625,8 @@ resource "aws_ecs_service" "ai" {
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
   network_configuration {
-    subnets          = aws_subnet.private[*].id
-    security_groups  = [aws_security_group.ecs.id]
+    subnets         = aws_subnet.private[*].id
+    security_groups = [aws_security_group.ecs.id]
   }
   service_registries {
     registry_arn = aws_service_discovery_service.ai.arn

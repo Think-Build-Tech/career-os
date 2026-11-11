@@ -23,6 +23,8 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
   PROJECT_NAME: careeros
   ENVIRONMENT: development
+  TF_VAR_public_hostname: ${{ vars.PUBLIC_HOSTNAME || 'dev-careeros.thinkbuild.in' }}
+  TF_VAR_tls_certificate_arn: ${{ vars.TLS_CERTIFICATE_ARN || '' }}
 
 jobs:
   deploy:

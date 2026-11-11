@@ -13,6 +13,23 @@ variable "environment" {
   default = "development"
 }
 
+variable "public_hostname" {
+  description = "Public DNS hostname for the application. DNS remains managed by the domain's authoritative provider."
+  type        = string
+  default     = "dev-careeros.thinkbuild.in"
+}
+
+variable "tls_certificate_arn" {
+  description = "ARN of an issued ACM certificate in aws_region for public_hostname. Leave empty to keep the bootstrap listener on HTTP."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.tls_certificate_arn == "" || can(regex("^arn:aws[a-z-]*:acm:[^:]+:[0-9]{12}:certificate/.+$", var.tls_certificate_arn))
+    error_message = "tls_certificate_arn must be empty or a valid ACM certificate ARN."
+  }
+}
+
 variable "vpc_cidr" {
   type    = string
   default = "10.42.0.0/16"

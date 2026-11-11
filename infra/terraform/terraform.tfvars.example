@@ -1,6 +1,9 @@
 aws_region        = "ap-south-1"
 project_name      = "careeros"
 environment       = "development"
+public_hostname   = "dev-careeros.thinkbuild.in"
+# Set this only after DNS validation changes the ACM certificate status to ISSUED.
+tls_certificate_arn = ""
 db_name           = "careeros"
 db_username       = "careeros"
 db_password       = "replace-with-a-long-random-password"

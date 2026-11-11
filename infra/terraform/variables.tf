@@ -58,6 +58,11 @@ variable "ai_service_api_key" {
 variable "auth_token_secret" {
   type      = string
   sensitive = true
+
+  validation {
+    condition     = length(var.auth_token_secret) >= 32
+    error_message = "auth_token_secret must contain at least 32 characters."
+  }
 }
 
 variable "seed_admin_password" {
